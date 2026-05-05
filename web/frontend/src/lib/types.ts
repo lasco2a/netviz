@@ -1,5 +1,32 @@
 // Shared types mirroring the snapshot.json schema produced by the exporter.
 
+export type DeviceRole =
+  | "router"
+  | "switch"
+  | "firewall"
+  | "wireless"
+  | "server"
+  | "storage"
+  | "printer"
+  | "workstation"
+  | "power"
+  | "environment"
+  | "unknown";
+
+export const DEVICE_ROLES: DeviceRole[] = [
+  "router",
+  "switch",
+  "firewall",
+  "wireless",
+  "server",
+  "storage",
+  "printer",
+  "workstation",
+  "power",
+  "environment",
+  "unknown",
+];
+
 export interface Device {
   device_id: number;
   hostname: string;
@@ -7,6 +34,7 @@ export interface Device {
   ip: string | null;
   location: string | null;
   type: string | null;
+  role: DeviceRole;
   os: string | null;
   hardware: string | null;
   vendor: string | null;
@@ -72,6 +100,7 @@ export interface Snapshot {
     ghost_endpoint_count: number;
     endpoint_count?: number;
     endpoint_resolved?: number;
+    role_counts?: Partial<Record<DeviceRole, number>>;
   };
   devices: Device[];
   edges: Edge[];

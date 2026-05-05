@@ -15,7 +15,8 @@ export const cyStyle: cytoscape.StylesheetStyle[] = [
   {
     selector: "node",
     style: {
-      "background-color": "#3aa0e6",
+      "background-color": "#ffffff",
+      "background-opacity": 1,
       "border-width": 1,
       "border-color": "#1f2d3d",
       label: "data(label)",
@@ -28,26 +29,26 @@ export const cyStyle: cytoscape.StylesheetStyle[] = [
       "text-background-opacity": 0.85,
       "text-background-padding": "2px",
       "text-background-shape": "roundrectangle",
-      width: 18,
-      height: 18,
+      width: 22,
+      height: 22,
     },
   },
   {
-    selector: 'node[type = "firewall"]',
-    style: { "background-color": "#d9534f", shape: "diamond", width: 22, height: 22 },
-  },
-  {
-    selector: 'node[type = "wireless"]',
-    style: { "background-color": "#5cb85c", shape: "round-triangle" },
-  },
-  {
-    selector: 'node[type = "storage"]',
-    style: { "background-color": "#7a8694", shape: "roundrectangle" },
+    // Devices with a role-icon: render the SVG as the node's background.
+    selector: "node[iconUrl]",
+    style: {
+      "background-image": "data(iconUrl)",
+      "background-fit": "contain",
+      "background-clip": "none",
+      "background-image-opacity": 1,
+      shape: "roundrectangle",
+    },
   },
   {
     selector: "node[?ghost]",
     style: {
       "background-color": "#cbd2da",
+      "background-image": "none",
       "border-width": 0,
       width: 8,
       height: 8,
@@ -58,7 +59,11 @@ export const cyStyle: cytoscape.StylesheetStyle[] = [
   },
   {
     selector: 'node[status = 0]',
-    style: { "border-color": "#d9534f", "border-width": 2 },
+    style: {
+      "border-color": "#d9534f",
+      "border-width": 2,
+      "background-image-opacity": 0.55,
+    },
   },
   {
     selector: "node:selected",
@@ -215,17 +220,39 @@ export const treeMapStyle: cytoscape.StylesheetStyle[] = [
       label: "data(label)",
       color: "#1f2d3d",
       "text-valign": "center",
-      "text-halign": "center",
+      "text-halign": "right",
+      "text-margin-x": 4,
       "font-size": 9,
       "text-background-opacity": 0,
       width: "label",
       height: 22,
-      padding: "6px",
+      padding: "6px 6px 6px 22px",
+      "background-image": "data(iconUrl)",
+      "background-fit": "none",
+      "background-width": "16px",
+      "background-height": "16px",
+      "background-position-x": "4px",
+      "background-position-y": "50%",
+      "background-clip": "none",
     },
   },
   {
     selector: 'node[?tmLeaf][status = 0]',
-    style: { "border-color": "#d9534f", "border-width": 2 },
+    style: { "border-color": "#d9534f", "border-width": 2, "background-image-opacity": 0.55 },
+  },
+  {
+    // tmFocus device may carry an icon when focused on a device.
+    selector: "node[?tmFocus][iconUrl]",
+    style: {
+      "background-image": "data(iconUrl)",
+      "background-fit": "none",
+      "background-width": "18px",
+      "background-height": "18px",
+      "background-position-x": "8px",
+      "background-position-y": "50%",
+      "background-clip": "none",
+      padding: "10px 10px 10px 28px",
+    },
   },
   {
     selector: "node[?tmEndpoint]",

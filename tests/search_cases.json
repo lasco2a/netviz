@@ -1,11 +1,11 @@
 {
   "_doc": "Shared parity fixtures for netviz search. The same snapshot subset and queries must yield identical results from both the TS frontend (lib/search.ts) and the Python backend (web/backend/search.py). Run `pytest tests/test_search_parity.py` and `npm test -- search` to verify.",
   "devices": [
-    {"device_id": 1, "hostname": "core-sw1.lan", "sysName": "core-sw1", "ip": "10.1.1.1", "type": "network", "os": "ios", "location": "DC1 / Rack A"},
-    {"device_id": 2, "hostname": "edge-rtr.example.com", "sysName": "edge-rtr", "ip": "10.1.1.15", "type": "network", "os": "ios-xe", "location": "DC1 / Rack B"},
-    {"device_id": 3, "hostname": "ap-floor3", "sysName": "ap-floor3", "ip": "10.2.5.7", "type": "wireless", "os": "airos", "location": "Office / Floor 3"},
-    {"device_id": 4, "hostname": "srv-db01", "sysName": "srv-db01", "ip": "192.168.10.50", "type": "server", "os": "linux", "location": "DC1 / Rack A"},
-    {"device_id": 5, "hostname": "v6host", "sysName": "v6host", "ip": "2001:db8::42", "type": "server", "os": "linux", "location": "DC2"}
+    {"device_id": 1, "hostname": "core-sw1.lan", "sysName": "core-sw1", "ip": "10.1.1.1", "type": "network", "role": "switch", "os": "ios", "location": "DC1 / Rack A"},
+    {"device_id": 2, "hostname": "edge-rtr.example.com", "sysName": "edge-rtr", "ip": "10.1.1.15", "type": "network", "role": "router", "os": "ios-xe", "location": "DC1 / Rack B"},
+    {"device_id": 3, "hostname": "ap-floor3", "sysName": "ap-floor3", "ip": "10.2.5.7", "type": "wireless", "role": "wireless", "os": "airos", "location": "Office / Floor 3"},
+    {"device_id": 4, "hostname": "srv-db01", "sysName": "srv-db01", "ip": "192.168.10.50", "type": "server", "role": "server", "os": "linux", "location": "DC1 / Rack A"},
+    {"device_id": 5, "hostname": "v6host", "sysName": "v6host", "ip": "2001:db8::42", "type": "server", "role": "server", "os": "linux", "location": "DC2"}
   ],
   "endpoints": [
     {"id": 100, "device_id": 1, "ip": "10.1.1.10", "mac": "aa:bb:cc:11:22:33", "hostname": "printer-a.lan"},
@@ -141,6 +141,12 @@
       "q": "phone-12",
       "devices": [],
       "endpoints": [102]
+    },
+    {
+      "name": "role matches haystack",
+      "q": "router",
+      "devices": [2],
+      "endpoints": []
     }
   ]
 }

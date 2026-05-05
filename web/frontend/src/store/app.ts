@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import * as api from "@/lib/api";
 import { buildIndex, type SnapshotIndex } from "@/lib/snapshotIndex";
-import type { DeviceDetail, MeUser, TreeSource } from "@/lib/types";
+import type { DeviceDetail, DeviceRole, MeUser, TreeSource } from "@/lib/types";
 
 export interface SearchResult {
   devices: Set<number>;
@@ -24,7 +24,7 @@ interface AppState {
   deviceDetail: DeviceDetail | null;
   loadingDetail: boolean;
   // Filters
-  filters: { search: string; types: Set<string>; statuses: Set<number> };
+  filters: { search: string; roles: Set<DeviceRole>; statuses: Set<number> };
   // Search (always server-side when query non-empty)
   searchResult: SearchResult | null;
   searchPending: boolean;
@@ -53,7 +53,7 @@ interface AppState {
   selectTreeNode: (id: string | null) => void;
   selectDevice: (id: number | null) => Promise<void>;
   setSearch: (s: string) => void;
-  toggleType: (t: string) => void;
+  toggleRole: (r: DeviceRole) => void;
   toggleStatus: (s: number) => void;
   setHelpOpen: (id: string | null) => void;
   setAdminOpen: (open: boolean) => void;
@@ -76,7 +76,7 @@ export const useApp = create<AppState>((set, get) => ({
   selectedDeviceId: null,
   deviceDetail: null,
   loadingDetail: false,
-  filters: { search: "", types: new Set(), statuses: new Set() },
+  filters: { search: "", roles: new Set(), statuses: new Set() },
   searchResult: null,
   searchPending: false,
   searchError: null,
@@ -203,11 +203,11 @@ export const useApp = create<AppState>((set, get) => ({
     }, SEARCH_DEBOUNCE_MS);
   },
 
-  toggleType(t) {
+  toggleRole(r) {
     const f = get().filters;
-    const next = new Set(f.types);
-    next.has(t) ? next.delete(t) : next.add(t);
-    set({ filters: { ...f, types: next } });
+    const next = new Set(f.roles);
+    next.has(r) ? next.delete(r) : next.add(r);
+    set({ filters: { ...f, roles: next } });
   },
 
   toggleStatus(st) {

@@ -141,6 +141,7 @@ def _device_text_haystack(d: dict[str, Any]) -> str:
         d.get("hostname"),
         d.get("sysName"),
         d.get("type"),
+        d.get("role"),
         d.get("os"),
         d.get("location"),
         d.get("vendor"),

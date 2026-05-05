@@ -155,9 +155,9 @@ a partial snapshot.
 
 - **Tree picker**: switch between location / groups / topology. Selecting a
   node filters the table and graph to that subtree.
-- **Filter chips**: type and status (up/down) chips with live counts.
+- **Filter chips**: role and status (up/down) chips with live counts.
 - **Search** (always server-side, debounced 250 ms). Tokens are AND-ed:
-  - free text: matches hostname, sysName, IP, location, hardware, ifAlias
+  - free text: matches hostname, sysName, IP, role, location, hardware, ifAlias
   - quoted phrase: `"rack a"`
   - IPv4/IPv6 exact, CIDR (`10.0.0.0/8`, `2001:db8::/32`)
   - IPv4 range full or last-octet shorthand: `10.1.1.10-10.1.1.50`, `10.1.1.10-50`
@@ -171,7 +171,8 @@ a partial snapshot.
 - **Tree-Map**: explorable map view; drill from root → tree node → device →
   endpoints; click breadcrumb to escape.
 - **URL state**: search query, view, tree, focus, drawer device and active
-  chips persist in the hash. Use the **Copy link** button to share a deep-link.
+  chips persist in the hash (`roles=` replaces old `types=`; old bookmarks
+  with `types=` are still accepted). Use the **Copy link** button to share a deep-link.
 - **Help (?)**: opens an in-app help modal — also addressable via
   `#help=search`, `#help=endpoints`, etc.
 - **Admin (⚙)**: visible to Observium users with `level >= 10`. Force a
@@ -186,6 +187,29 @@ a partial snapshot.
   - **Collapse**: when clustering is on, render only one node per cluster with
     weighted summary edges between clusters — true tree-graph hybrid.
   - Built-in legend overlay.
+
+## Device roles
+
+The exporter classifies every device into one of eleven roles using an ordered
+rule table in `netviz/exporter/snapshot.py`. The role is stored as
+`device.role` in the snapshot and is used for icons in every view.
+
+| Role | Icon | Classification rule |
+|------|------|---------------------|
+| `firewall` | ShieldHalf | sysDescr / hostname contains *firewall*, *asa*, *pix*, *fortigate*, *checkpoint*, *palo* |
+| `router` | Router | type=`network` + sysDescr / hostname contains *router*, *rtr*, *gw*, *gateway*, *junos*, *vyos*, *mikrotik* |
+| `wireless` | AccessPoint | type=`wireless`, or sysDescr contains *access point*, *ap*, *airos* |
+| `server` | Server | type=`server`, `linux`, `windows`, or `esxi` |
+| `storage` | Database | type=`storage` or sysDescr contains *nas*, *san*, *netapp*, *synology* |
+| `printer` | Printer | type=`printer` or sysDescr contains *print* |
+| `workstation` | Desktop | type=`workstation` or sysDescr contains *workstation*, *desktop*, *laptop* |
+| `power` | Bolt | type=`power` or sysDescr contains *ups*, *pdu* |
+| `environment` | Temperature | type=`environment` or sysDescr contains *sensor*, *climate* |
+| `switch` | Network | type=`network` (default for network devices not matched above) |
+| `unknown` | DeviceUnknown | everything else |
+
+Role icons appear in: **Graph view** nodes, **Tree-Map** leaves, **Device table**
+hostname column, **Device drawer** header, and **Filter Bar** role chips.
 
 ## Reverse-DNS resolver
 

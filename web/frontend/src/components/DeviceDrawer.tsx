@@ -1,3 +1,4 @@
+import { iconComponentFor, roleLabel } from "@/lib/deviceIcon";
 import { useApp } from "@/store/app";
 
 export function DeviceDrawer() {
@@ -23,10 +24,21 @@ export function DeviceDrawer() {
   }
 
   const d = detail.device;
+  const HeaderIcon = iconComponentFor(d.role);
   return (
     <div className="h-full bg-white border-l border-obs-border flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b border-obs-border">
-        <div className="font-semibold text-obs-navy truncate">{d.hostname}</div>
+        <div className="flex items-center gap-2 min-w-0">
+          <HeaderIcon
+            size={20}
+            stroke={1.6}
+            className={`shrink-0 text-obs-navy ${d.status === 0 ? "opacity-60" : ""}`}
+          />
+          <div className="font-semibold text-obs-navy truncate">{d.hostname}</div>
+          <span className="text-[10px] uppercase tracking-wide text-obs-mute shrink-0">
+            {roleLabel(d.role)}
+          </span>
+        </div>
         <button
           onClick={() => select(null)}
           className="text-obs-mute hover:text-obs-navy text-sm"
@@ -74,6 +86,7 @@ function Facts({ d }: { d: import("@/lib/types").Device }) {
   const rows: [string, string | number | null][] = [
     ["IP", d.ip],
     ["sysName", d.sysName],
+    ["Role", roleLabel(d.role)],
     ["Type", d.type],
     ["OS", d.os],
     ["Hardware", d.hardware],

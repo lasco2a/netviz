@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -28,6 +29,65 @@ from netviz import db
 from netviz.config import SNAPSHOT_DIR
 from netviz.dns_resolver import load_cache as load_dns_cache
 from netviz.exporter import trees
+
+
+# ---------------------------------------------------------------------------
+# Role classification
+# ---------------------------------------------------------------------------
+
+# Order matters: the first rule whose predicate matches wins.
+_ROLE_RULES: list[tuple[str, callable]] = [
+    (
+        "firewall",
+        lambda t, o, h: t == "firewall"
+        or o in {"pix", "asa", "fortigate", "fortios", "paloalto", "junos-srx"},
+    ),
+    (
+        "router",
+        lambda t, o, h: o in {"iosxr", "junos", "vyos", "mikrotik", "unifi-udm"}
+        or bool(re.search(r"\b(ASR|ISR|MX\d|UCG|EdgeRouter|Edge[- ]?Router)\b", h, re.I))
+        or "Nexus 7" in h,
+    ),
+    (
+        "wireless",
+        lambda t, o, h: t == "wireless"
+        or o in {"unifi", "airos", "aruba-wlc", "ruckus"}
+        or bool(re.search(r"\b(AP\b|U7-|UAP-)", h, re.I)),
+    ),
+    (
+        "server",
+        lambda t, o, h: t == "server"
+        or o in {"linux", "windows", "freebsd", "vmware", "esxi", "hpilo"},
+    ),
+    (
+        "storage",
+        lambda t, o, h: t == "storage"
+        or o in {"qnap", "netapp", "emc", "synology", "freenas"},
+    ),
+    (
+        "printer",
+        lambda t, o, h: t == "printer"
+        or o in {"generic-printer", "hpprinter", "ricoh", "xerox"},
+    ),
+    ("workstation", lambda t, o, h: t == "workstation"),
+    ("power", lambda t, o, h: t == "power"),
+    ("environment", lambda t, o, h: t == "environment"),
+    # Default for type=="network" (and any leftover): assume switch.
+    ("switch", lambda t, o, h: t == "network"),
+]
+
+
+def _classify_role(dev: dict[str, Any]) -> str:
+    t = (dev.get("type") or "").lower()
+    o = (dev.get("os") or "").lower()
+    h = dev.get("hardware") or ""
+    for role, pred in _ROLE_RULES:
+        try:
+            if pred(t, o, h):
+                return role
+        except Exception:
+            continue
+    return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +223,13 @@ def _collect_endpoints(
 def build_snapshot(conn) -> dict[str, Any]:
     devices_raw = _fetch(conn, f"SELECT {DEVICE_COLS} FROM devices ORDER BY device_id")
     devices = [_row(d) for d in devices_raw]
+    for d in devices:
+        d["role"] = _classify_role(d)
     device_ids = {d["device_id"] for d in devices}
+
+    role_counts: dict[str, int] = {}
+    for d in devices:
+        role_counts[d["role"]] = role_counts.get(d["role"], 0) + 1
 
     neighbours_raw = _fetch(
         conn,
@@ -237,6 +303,7 @@ def build_snapshot(conn) -> dict[str, Any]:
             "ghost_endpoint_count": len(ghost_endpoints),
             "endpoint_count": ep_stats["total"],
             "endpoint_resolved": ep_stats["resolved"],
+            "role_counts": role_counts,
         },
         "devices": devices,
         "edges": resolved_edges,
@@ -312,7 +379,7 @@ def build_device_detail(conn, device_id: int) -> dict[str, Any]:
             )
 
         return {
-            "device": _row(device),
+            "device": _row(device) | {"role": _classify_role(_row(device))},
             "ports": [_row(p) for p in ports],
             "neighbours": [_row(n) for n in neighbours],
             "processors": [_row(p) for p in processors],

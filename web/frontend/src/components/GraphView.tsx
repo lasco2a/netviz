@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
 
 import { cyStyle, fcoseLayout } from "@/lib/cytoscape-config";
+import { iconUrlFor } from "@/lib/deviceIcon";
 import { useFilteredDeviceIds } from "@/lib/filters";
 import type { TreeNode } from "@/lib/types";
 import { useApp } from "@/store/app";
@@ -94,6 +95,8 @@ export function GraphView() {
         id: `d${d.device_id}`,
         label: d.hostname,
         type: d.type ?? "",
+        role: d.role ?? "unknown",
+        iconUrl: iconUrlFor(d.role),
         status: d.status,
         device_id: d.device_id,
       };

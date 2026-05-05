@@ -1,37 +1,36 @@
 import { useMemo } from "react";
 
+import { iconComponentFor, roleLabel } from "@/lib/deviceIcon";
 import { useFilteredDeviceIds } from "@/lib/filters";
+import type { DeviceRole } from "@/lib/types";
 import { useApp } from "@/store/app";
 
-// Compact strip of type and status chips below the TopBar.
+// Compact strip of role and status chips below the TopBar.
 // Counts reflect what's visible after the *other* filters (tree + search) are
 // applied, so the user can see how many devices each chip would match.
 export function FilterBar() {
   const index = useApp((s) => s.index);
   const filters = useApp((s) => s.filters);
-  const toggleType = useApp((s) => s.toggleType);
+  const toggleRole = useApp((s) => s.toggleRole);
   const toggleStatus = useApp((s) => s.toggleStatus);
   const visible = useFilteredDeviceIds();
 
-  const { typeCounts, statusCounts } = useMemo(() => {
-    const tc = new Map<string, number>();
+  const { roleCounts, statusCounts } = useMemo(() => {
+    const rc = new Map<DeviceRole, number>();
     const sc = new Map<number, number>();
-    if (!index) return { typeCounts: tc, statusCounts: sc };
-    // Iterate union of currently-visible AND filtered-out-by-chips devices so
-    // chip counts don't disappear when the user toggles them on.
+    if (!index) return { roleCounts: rc, statusCounts: sc };
     for (const d of index.raw.devices) {
-      const t = d.type ?? "unknown";
-      tc.set(t, (tc.get(t) ?? 0) + 1);
+      rc.set(d.role, (rc.get(d.role) ?? 0) + 1);
       sc.set(d.status, (sc.get(d.status) ?? 0) + 1);
     }
-    return { typeCounts: tc, statusCounts: sc };
+    return { roleCounts: rc, statusCounts: sc };
   }, [index]);
 
   if (!index) return null;
 
-  const sortedTypes = Array.from(typeCounts.entries())
+  const sortedRoles = Array.from(roleCounts.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 12); // cap chip count to keep the bar tidy
+    .slice(0, 12);
 
   return (
     <div className="flex items-center gap-3 px-4 py-1.5 bg-obs-surface border-b border-obs-border text-xs flex-wrap">
@@ -53,16 +52,18 @@ export function FilterBar() {
         );
       })}
       <div className="h-4 w-px bg-obs-border" />
-      <span className="text-obs-mute">type:</span>
-      {sortedTypes.map(([t, c]) => {
-        const active = filters.types.has(t);
+      <span className="text-obs-mute">role:</span>
+      {sortedRoles.map(([r, c]) => {
+        const active = filters.roles.has(r);
+        const Icon = iconComponentFor(r);
         return (
           <Chip
-            key={t}
+            key={r}
             active={active}
-            onClick={() => toggleType(t)}
-            label={t}
+            onClick={() => toggleRole(r)}
+            label={roleLabel(r)}
             count={c}
+            icon={<Icon size={12} stroke={1.8} />}
           />
         );
       })}
@@ -76,12 +77,14 @@ function Chip({
   label,
   count,
   color,
+  icon,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count: number;
   color?: "green" | "red";
+  icon?: React.ReactNode;
 }) {
   const palette = active
     ? color === "green"
@@ -95,6 +98,7 @@ function Chip({
       onClick={onClick}
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] ${palette}`}
     >
+      {icon ? <span className="shrink-0">{icon}</span> : null}
       <span>{label}</span>
       <span className={active ? "opacity-80" : "text-obs-mute"}>{count}</span>
     </button>

@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 
 import { useFilteredDeviceIds } from "@/lib/filters";
+import { iconComponentFor, roleLabel } from "@/lib/deviceIcon";
 import type { Device } from "@/lib/types";
 import { useApp } from "@/store/app";
 
@@ -60,11 +61,22 @@ export function DeviceTable() {
                 style={{ top: vi.start, height: vi.size }}
               >
                 <div className="w-12 text-obs-mute">{d.device_id}</div>
-                <div className="flex-1 min-w-0 truncate">
-                  {d.hostname}
+                <div className="flex-1 min-w-0 truncate flex items-center gap-1.5">
+                  {(() => {
+                    const Icon = iconComponentFor(d.role);
+                    const dim = d.status === 0 ? "opacity-60" : "";
+                    return (
+                      <Icon
+                        size={14}
+                        stroke={1.6}
+                        className={`shrink-0 text-obs-navy ${dim}`}
+                      />
+                    );
+                  })()}
+                  <span className="truncate">{d.hostname}</span>
                 </div>
                 <div className="w-32 truncate">{d.ip ?? ""}</div>
-                <div className="w-28 truncate">{d.type ?? ""}</div>
+                <div className="w-28 truncate">{roleLabel(d.role)}</div>
                 <div className="w-44 truncate">{d.hardware ?? ""}</div>
                 <div className="w-44 truncate">{d.location ?? ""}</div>
                 <div className="w-20 text-right">

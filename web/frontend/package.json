@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tabler/icons": "^3.42.0",
+    "@tabler/icons-react": "^3.42.0",
     "@tanstack/react-table": "^8.20.5",
     "@tanstack/react-virtual": "^3.10.8",
     "cytoscape": "^3.30.2",

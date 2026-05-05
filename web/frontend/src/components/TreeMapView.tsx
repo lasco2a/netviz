@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
 
 import { cyStyle, dagreLayout, treeMapStyle } from "@/lib/cytoscape-config";
+import { iconUrlFor } from "@/lib/deviceIcon";
 import { useFilteredDeviceIds } from "@/lib/filters";
 import type { TreeNode } from "@/lib/types";
 import { useApp } from "@/store/app";
@@ -101,6 +102,7 @@ export function TreeMapView() {
           id: focusKey,
           label: `${dev?.hostname ?? `device ${devFocusId}`}  (${eps.length} endpoints)`,
           tmFocus: true,
+          iconUrl: dev ? iconUrlFor(dev.role) : undefined,
         },
       });
       for (let i = 0; i < shown.length; i++) {
@@ -228,6 +230,7 @@ export function TreeMapView() {
           tmLeaf: true,
           status: d.status,
           device_id: did,
+          iconUrl: iconUrlFor(d.role),
         },
       });
       els.push({

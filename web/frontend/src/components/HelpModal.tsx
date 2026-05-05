@@ -1,5 +1,18 @@
 import { useEffect } from "react";
 
+import {
+  IconNetwork,
+  IconRouter,
+  IconShieldHalfFilled,
+  IconAccessPoint,
+  IconServer,
+  IconDatabase,
+  IconPrinter,
+  IconDeviceDesktop,
+  IconBolt,
+  IconTemperature,
+  IconDeviceUnknown,
+} from "@tabler/icons-react";
 import { useApp } from "@/store/app";
 
 const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
@@ -25,7 +38,7 @@ const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
           </li>
         </ul>
         <p>
-          The left tree filters by location/group/topology. Status and type
+          The left tree filters by location/group/topology. Status and role
           chips (under the top bar) further narrow what's visible.
         </p>
       </div>
@@ -39,7 +52,7 @@ const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
         <p>The search box accepts space-separated tokens (AND-combined):</p>
         <table className="w-full text-xs border border-obs-border">
           <tbody>
-            <Row k="plain text" v="case-insensitive substring on hostname / location / type / OS" />
+            <Row k="plain text" v="case-insensitive substring on hostname / location / role / type / OS" />
             <Row k='"quoted phrase"' v="text including spaces, e.g. " ex='"rack a"' />
             <Row k="IPv4 / IPv6" v="exact match against device IP" ex="10.1.1.5  ::1" />
             <Row k="CIDR" v="range match (v4 or v6)" ex="10.1.1.0/24" />
@@ -76,6 +89,45 @@ const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
     ),
   },
   {
+    id: "roles",
+    label: "Roles & icons",
+    body: (
+      <div className="space-y-2 text-sm">
+        <p>
+          Every device is automatically classified into one of eleven roles by
+          the snapshot exporter. The role drives the icon shown in every view
+          and can be used in the search box (e.g. <code>router</code>).
+        </p>
+        <table className="w-full text-xs border border-obs-border">
+          <thead>
+            <tr className="bg-obs-surface text-obs-mute">
+              <th className="px-2 py-1 text-left w-8"></th>
+              <th className="px-2 py-1 text-left w-28">Role</th>
+              <th className="px-2 py-1 text-left">Matched when…</th>
+            </tr>
+          </thead>
+          <tbody>
+            <RoleRow icon={<IconShieldHalfFilled size={14} stroke={1.6} />} role="firewall" rule='sysDescr/hostname ∋ firewall, asa, pix, fortigate, checkpoint, palo' />
+            <RoleRow icon={<IconRouter size={14} stroke={1.6} />} role="router" rule='type=network + sysDescr/hostname ∋ router, rtr, gw, gateway, junos, vyos, mikrotik' />
+            <RoleRow icon={<IconAccessPoint size={14} stroke={1.6} />} role="wireless" rule='type=wireless, or sysDescr ∋ access point, ap, airos' />
+            <RoleRow icon={<IconServer size={14} stroke={1.6} />} role="server" rule='type ∈ {server, linux, windows, esxi}' />
+            <RoleRow icon={<IconDatabase size={14} stroke={1.6} />} role="storage" rule='type=storage, or sysDescr ∋ nas, san, netapp, synology' />
+            <RoleRow icon={<IconPrinter size={14} stroke={1.6} />} role="printer" rule='type=printer, or sysDescr ∋ print' />
+            <RoleRow icon={<IconDeviceDesktop size={14} stroke={1.6} />} role="workstation" rule='type=workstation, or sysDescr ∋ workstation, desktop, laptop' />
+            <RoleRow icon={<IconBolt size={14} stroke={1.6} />} role="power" rule='type=power, or sysDescr ∋ ups, pdu' />
+            <RoleRow icon={<IconTemperature size={14} stroke={1.6} />} role="environment" rule='type=environment, or sysDescr ∋ sensor, climate' />
+            <RoleRow icon={<IconNetwork size={14} stroke={1.6} />} role="switch" rule='type=network (default for network devices not matched above)' />
+            <RoleRow icon={<IconDeviceUnknown size={14} stroke={1.6} />} role="unknown" rule='everything else' />
+          </tbody>
+        </table>
+        <p className="text-obs-mute">
+          Use the <strong>role:</strong> chips in the filter bar to show only
+          devices of a specific role.
+        </p>
+      </div>
+    ),
+  },
+  {
     id: "url",
     label: "Sharing links",
     body: (
@@ -99,6 +151,16 @@ function Row({ k, v, ex }: { k: string; v: string; ex?: string }) {
         {v}
         {ex && <span className="ml-1 text-obs-mute">e.g. <code>{ex}</code></span>}
       </td>
+    </tr>
+  );
+}
+
+function RoleRow({ icon, role, rule }: { icon: React.ReactNode; role: string; rule: string }) {
+  return (
+    <tr className="border-b border-obs-border last:border-b-0">
+      <td className="px-2 py-1 text-obs-navy">{icon}</td>
+      <td className="px-2 py-1 font-mono text-obs-navy">{role}</td>
+      <td className="px-2 py-1 text-obs-mute">{rule}</td>
     </tr>
   );
 }

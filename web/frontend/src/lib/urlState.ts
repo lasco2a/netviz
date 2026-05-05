@@ -2,12 +2,14 @@
 //
 // The URL hash carries the full UI state so links are shareable: search
 // query, view mode, tree source, tree-node selection, treemap focus,
-// selected device, type chips, status chips. Help anchors use a separate
+// selected device, role chips, status chips. Help anchors use a separate
 // short hash (`#help=search`) so they don't collide with the JSON state.
+// `types=` is accepted on read for backwards compat with old bookmarks.
 
 import { useEffect } from "react";
 
 import { useApp } from "@/store/app";
+import { DEVICE_ROLES, type DeviceRole } from "@/lib/types";
 
 interface UrlState {
   q?: string;
@@ -16,10 +18,12 @@ interface UrlState {
   treenode?: string;
   focus?: string;
   dev?: number;
-  types?: string[];
+  roles?: DeviceRole[];
   status?: number[];
   help?: string;
 }
+
+const ROLE_SET = new Set<string>(DEVICE_ROLES);
 
 function readHash(): UrlState {
   const raw = window.location.hash.slice(1);
@@ -29,9 +33,17 @@ function readHash(): UrlState {
   try {
     const params = new URLSearchParams(raw);
     const out: UrlState = {};
+    // Accept both `roles=` (new) and legacy `types=` for shareable URL compat.
+    const rolesRaw = params.get("roles") ?? params.get("types");
+    if (rolesRaw) {
+      out.roles = rolesRaw
+        .split(",")
+        .filter((s) => ROLE_SET.has(s)) as DeviceRole[];
+    }
     for (const [k, v] of params) {
-      if (k === "types") out.types = v.split(",").filter(Boolean);
-      else if (k === "status") out.status = v.split(",").map(Number).filter((n) => !isNaN(n));
+      if (k === "roles" || k === "types") continue;
+      if (k === "status")
+        out.status = v.split(",").map(Number).filter((n) => !isNaN(n));
       else if (k === "dev") {
         const n = Number(v);
         if (!isNaN(n)) out.dev = n;
@@ -51,7 +63,7 @@ function writeHash(state: UrlState): void {
   if (state.treenode) params.set("treenode", state.treenode);
   if (state.focus) params.set("focus", state.focus);
   if (state.dev != null) params.set("dev", String(state.dev));
-  if (state.types && state.types.length) params.set("types", state.types.join(","));
+  if (state.roles && state.roles.length) params.set("roles", state.roles.join(","));
   if (state.status && state.status.length)
     params.set("status", state.status.join(","));
   const next = params.toString();
@@ -78,7 +90,7 @@ export function hydrateFromHash(): void {
   if (u.treenode) s.selectTreeNode(u.treenode);
   if (u.focus) s.setTreeMapFocus(u.focus);
   if (u.dev != null) s.selectDevice(u.dev);
-  if (u.types) for (const t of u.types) s.toggleType(t);
+  if (u.roles) for (const r of u.roles) s.toggleRole(r);
   if (u.status) for (const st of u.status) s.toggleStatus(st);
 }
 
@@ -101,7 +113,7 @@ export function useUrlSync(): void {
         treenode: s.selectedTreeNode ?? undefined,
         focus: s.treeMapFocus ?? undefined,
         dev: s.selectedDeviceId ?? undefined,
-        types: Array.from(s.filters.types),
+        roles: Array.from(s.filters.roles),
         status: Array.from(s.filters.statuses),
       });
     });
