@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape, { type Core, type ElementDefinition, type NodeSingular } from "cytoscape";
 
 import {
@@ -30,6 +30,11 @@ export function GraphView() {
   const toggleCollapse = useApp((s) => s.toggleCollapseClusters);
   const graphLayout = useApp((s) => s.graphLayout);
   const setGraphLayout = useApp((s) => s.setGraphLayout);
+
+  // Zoom step for double-click. Kept as local view state (not URL-persisted).
+  const [zoomStep, setZoomStep] = useState(15); // percent, e.g. 15 => ×1.15
+  const zoomStepRef = useRef(zoomStep);
+  zoomStepRef.current = zoomStep;
   const search = useApp((s) => s.filters.search);
   const visible = useFilteredDeviceIds();
 
@@ -191,8 +196,9 @@ export function GraphView() {
       const hood = node.openNeighborhood();
       hood.nodes().addClass("neighbour");
       hood.edges().addClass("neighbour-edge");
-      // Zoom in 15 %, centred on the clicked node, capped at maxZoom.
-      const nextZoom = Math.min(cy.zoom() * 1.15, 4);
+      // Zoom in by the configured step, centred on the clicked node.
+      const factor = 1 + zoomStepRef.current / 100;
+      const nextZoom = Math.min(cy.zoom() * factor, 4);
       cy.animate({
         zoom: { level: nextZoom, position: node.position() },
         duration: 250,
@@ -225,17 +231,14 @@ export function GraphView() {
     layout.run();
   }, [elements, graphLayout]);
 
-  // Highlight current selection.
+  // Highlight current selection (no viewport move — keeps user's zoom/pan).
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
     cy.$(":selected").unselect();
     if (selectedDeviceId != null) {
       const n = cy.getElementById(`d${selectedDeviceId}`);
-      if (n.nonempty()) {
-        n.select();
-        cy.animate({ center: { eles: n }, duration: 250 });
-      }
+      if (n.nonempty()) n.select();
     }
   }, [selectedDeviceId, elements]);
 
@@ -301,6 +304,22 @@ export function GraphView() {
             onChange={() => useApp.getState().toggleGhostEndpoints()}
           />
           <span>ghosts</span>
+        </label>
+        <label className="flex items-center gap-1">
+          <span className="text-obs-mute">zoom step</span>
+          <input
+            type="number"
+            min={1}
+            max={200}
+            step={1}
+            value={zoomStep}
+            onChange={(e) => {
+              const v = Math.max(1, Math.min(200, Number(e.target.value)));
+              if (!isNaN(v)) setZoomStep(v);
+            }}
+            className="w-12 border border-obs-border rounded px-1 py-0.5 bg-white text-obs-text text-[11px] text-right"
+          />
+          <span className="text-obs-mute">%</span>
         </label>
         <label
           className={
