@@ -181,7 +181,7 @@ export function parseQuery(q: string): Token[] {
 // ---------------------------------------------------------------------------
 
 function deviceHaystack(d: Device): string {
-  return [d.hostname, d.sysName, d.type, d.role, d.os, d.location, d.vendor, d.hardware]
+  return [d.hostname, d.sysName, d.ip, d.type, d.role, d.os, d.location, d.vendor, d.hardware]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();

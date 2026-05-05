@@ -37,6 +37,9 @@ interface AppState {
   clusterMode: "off" | "tree";
   collapseClusters: boolean;
   graphLayout: GraphLayout;
+  // Theme
+  theme: "light" | "dark";
+
   // Modals
   helpOpen: string | null; // null = closed; otherwise section anchor
   adminOpen: boolean;
@@ -60,6 +63,7 @@ interface AppState {
   toggleStatus: (s: number) => void;
   setHelpOpen: (id: string | null) => void;
   setAdminOpen: (open: boolean) => void;
+  toggleTheme: () => void;
 }
 
 // Module-scoped controller so successive setSearch() calls cancel in-flight
@@ -89,6 +93,7 @@ export const useApp = create<AppState>((set, get) => ({
   clusterMode: "off",
   collapseClusters: false,
   graphLayout: "dagre-tb",
+  theme: (localStorage.getItem("theme") as "light" | "dark") ?? "light",
   helpOpen: null,
   adminOpen: false,
 
@@ -237,5 +242,11 @@ export const useApp = create<AppState>((set, get) => ({
 
   setAdminOpen(open) {
     set({ adminOpen: open });
+  },
+
+  toggleTheme() {
+    const next = get().theme === "light" ? "dark" : "light";
+    localStorage.setItem("theme", next);
+    set({ theme: next });
   },
 }));

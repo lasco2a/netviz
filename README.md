@@ -131,6 +131,41 @@ cookie. No new credentials, no user duplication.
 
 Users below `NETVIZ_MIN_USER_LEVEL` are rejected.
 
+## Observium database tables
+
+The exporter reads the following Observium MariaDB tables. **Read-only access is sufficient — no writes are ever made.** All cross-table relationships are resolved in Python after independent single-table SELECTs (no SQL JOINs are used).
+
+### Tables used in `snapshot.json` (global)
+
+| Table | Columns read | Powers |
+|-------|-------------|--------|
+| `devices` | `device_id`, `hostname`, `sysName`, `ip`, `location`, `type`, `os`, `hardware`, `vendor`, `status`, `status_type`, `ignore`, `disabled`, `uptime`, `last_polled`, `sysDescr`, `purpose`, `asset_tag` | `snapshot.devices[]`, all three trees, role classification, `meta.device_count` |
+| `neighbours` | `neighbour_id`, `device_id`, `port_id`, `remote_device_id`, `remote_port_id`, `active`, `protocol`, `remote_hostname`, `remote_port`, `remote_platform`, `remote_address` | rows **with** `remote_device_id` → `snapshot.edges[]` and `meta.edge_count`; rows **without** → `snapshot.ghost_endpoints[]` |
+| `ip_mac` | `mac_id`, `device_id`, `port_id`, `mac_ifIndex`, `mac_address`, `ip_address`, `ip_version` (filter: `ip_address <> ''`) | `snapshot.endpoints[]` (merged with DNS cache for hostnames), `meta.endpoint_count` |
+| `groups` | `group_id`, `group_name`, `entity_type` | `snapshot.trees.groups` (optional — table may not exist) |
+| `groups_assoc` | `group_id`, `entity_id` | device→group membership for `trees.groups` (optional) |
+
+### Tables used in per-device files (`device/<id>.json` only)
+
+| Table | Columns read | Powers |
+|-------|-------------|--------|
+| `ports` | `port_id`, `device_id`, `ifIndex`, `ifName`, `ifDescr`, `ifAlias`, `ifType`, `ifSpeed`, `ifHighSpeed`, `ifMtu`, `ifOperStatus`, `ifAdminStatus`, `ifPhysAddress`, `ifVlan`, `ifInOctets_rate`, `ifOutOctets_rate`, `ignore`, `disabled`, `deleted`, `port_label`, `port_label_short` | `device.ports[]` in the device drawer |
+| `processors` | `processor_id`, `processor_type`, `processor_descr`, `processor_usage`, `processor_polled` | `device.processors[]` |
+| `mempools` | `mempool_id`, `mempool_descr`, `mempool_perc`, `mempool_used`, `mempool_total`, `mempool_polled` | `device.mempools[]` |
+| `ip_mac` | (same columns as above, filtered to `device_id = %s`) | `device.endpoints[]` |
+| `neighbours` | (same columns as above, filtered to `device_id = %s`) | `device.neighbours[]` |
+
+### Tables used for other purposes
+
+| Table | Where | Purpose |
+|-------|-------|---------|
+| `ip_mac` | `netviz/dns_resolver.py` | `SELECT DISTINCT ip_address` — list of IPs to reverse-resolve; results cached to `snapshot/dns_cache.json` |
+| `users` | `netviz/web/backend/auth.py` | bcrypt login check only — no snapshot involvement |
+
+### Not used
+
+All other Observium tables (alerts, ports_stats, sensors, syslog, eventlog, …) are not read. The tool is intentionally minimal: it only needs topology (neighbours), identity (devices, groups), and endpoint reachability (ip_mac).
+
 ## Snapshot contents
 
 `snapshot.json`:
@@ -172,7 +207,7 @@ a partial snapshot.
   endpoints; click breadcrumb to escape.
 - **URL state**: search query, view, tree, focus, drawer device and active
   chips persist in the hash (`roles=` replaces old `types=`; old bookmarks
-  with `types=` are still accepted). Use the **Copy link** button to share a deep-link.
+  with `types=` are still accepted). Use the **Share this link** button to share a deep-link.
 - **Help (?)**: opens an in-app help modal — also addressable via
   `#help=search`, `#help=endpoints`, etc.
 - **Admin (⚙)**: visible to Observium users with `level >= 10`. Force a

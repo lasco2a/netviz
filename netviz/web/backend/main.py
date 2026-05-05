@@ -12,10 +12,14 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from netviz.config import HOST, PORT, REPO_ROOT, SESSION_HOURS, SNAPSHOT_DIR
-from netviz.web.backend import admin, auth, search as search_mod
-from netviz import db
+from netviz.web.backend import admin, auth, scheduler, search as search_mod
 
 app = FastAPI(title="netviz", version="0.1.0", docs_url=None, redoc_url=None)
+
+
+@app.on_event("startup")
+def _startup() -> None:
+    scheduler.start()
 
 FRONTEND_DIST = REPO_ROOT / "web" / "frontend" / "dist"
 
@@ -180,21 +184,39 @@ def api_admin_refresh_status(_: auth.User = Depends(_require_admin)) -> dict:
     return admin.status()
 
 
-@app.get("/api/admin/sql")
-def api_admin_sql(_: auth.User = Depends(_require_admin)) -> dict:
-    """Return the last 100 SQL queries executed by the web backend."""
-    return {
-        "entries": [
-            {
-                "ts": e.ts,
-                "sql": e.sql,
-                "params": e.params,
-                "duration_ms": e.duration_ms,
-                "rows": e.rows,
-            }
-            for e in db.get_sql_log()
-        ]
-    }
+@app.get("/api/admin/exporter-sql")
+def api_admin_exporter_sql(_: auth.User = Depends(_require_admin)) -> dict:
+    """Return SQL queries from the last exporter run (written by snapshot.py)."""
+    sql_file = SNAPSHOT_DIR / ".exporter_sql.json"
+    if not sql_file.exists():
+        return {"entries": []}
+    try:
+        entries = json.loads(sql_file.read_text(encoding="utf-8"))
+    except Exception:
+        return {"entries": []}
+    return {"entries": entries}
+
+
+@app.get("/api/admin/schedule")
+def api_admin_schedule_get(_: auth.User = Depends(_require_admin)) -> dict:
+    return {"entries": scheduler.load()}
+
+
+@app.post("/api/admin/schedule")
+async def api_admin_schedule_post(
+    request: Request, _: auth.User = Depends(_require_admin)
+) -> dict:
+    import re
+    body = await request.json()
+    incoming = body if isinstance(body, list) else body.get("entries", [])
+    # Validate each entry.
+    for e in incoming:
+        if not isinstance(e, dict):
+            raise HTTPException(status_code=400, detail="each entry must be an object")
+        if not re.fullmatch(r"\d{2}:\d{2}", str(e.get("time", ""))):
+            raise HTTPException(status_code=400, detail=f"invalid time: {e.get('time')!r}")
+    saved = scheduler.save(incoming)
+    return {"entries": saved}
 
 
 # ---------------------------------------------------------------------------

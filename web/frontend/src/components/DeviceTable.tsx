@@ -33,7 +33,7 @@ export function DeviceTable() {
   });
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-obs-card">
       <div className="flex items-center px-3 py-2 border-b border-obs-border text-xs text-obs-mute">
         <span>{rows.length.toLocaleString()} devices</span>
       </div>
@@ -56,7 +56,7 @@ export function DeviceTable() {
                 key={d.device_id}
                 onClick={() => select(d.device_id)}
                 className={`absolute left-0 right-0 flex items-center px-3 py-1 border-b border-obs-border/50 cursor-pointer hover:bg-obs-surface ${
-                  isSelected ? "bg-blue-50" : ""
+                  isSelected ? "bg-obs-blue/10" : ""
                 }`}
                 style={{ top: vi.start, height: vi.size }}
               >

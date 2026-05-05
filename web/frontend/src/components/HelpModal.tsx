@@ -199,7 +199,7 @@ export function HelpModal() {
       onClick={() => setOpen(null)}
     >
       <div
-        className="bg-white rounded shadow-xl w-full max-w-4xl flex flex-col"
+        className="bg-obs-card rounded shadow-xl w-full max-w-4xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-2 border-b border-obs-border flex items-center justify-between">

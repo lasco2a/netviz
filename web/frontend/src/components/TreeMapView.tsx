@@ -348,15 +348,26 @@ export function TreeMapView() {
     return <div className="p-6 text-obs-mute text-sm">Tree not available.</div>;
   }
 
+  function zoomBy(factor: number) {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const next = Math.min(Math.max(cy.zoom() * factor, cy.minZoom()), cy.maxZoom());
+    cy.animate({
+      zoom: { level: next, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } },
+      duration: 150,
+      easing: "ease-in-out-cubic",
+    });
+  }
+
   return (
-    <div className="relative h-full w-full bg-white flex flex-col">
+    <div className="relative h-full w-full bg-obs-card flex flex-col">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1 px-3 py-1.5 border-b border-obs-border bg-obs-surface text-xs">
         {breadcrumb.map((n, i) => (
           <span key={`${n.id ?? "root"}-${i}`} className="flex items-center gap-1">
             {i > 0 && <span className="text-obs-mute">›</span>}
             <button
-              className={`px-1.5 py-0.5 rounded hover:bg-white ${
+              className={`px-1.5 py-0.5 rounded hover:bg-obs-surface ${
                 i === breadcrumb.length - 1
                   ? "font-semibold text-obs-navy"
                   : "text-obs-blue hover:underline"
@@ -383,10 +394,22 @@ export function TreeMapView() {
             no devices match current filters
           </div>
         )}
-        <div className="absolute top-2 left-2 bg-white/90 border border-obs-border rounded px-2 py-1 text-[11px] text-obs-text shadow-sm">
+        <div className="absolute top-2 left-2 bg-obs-card/90 border border-obs-border rounded px-2 py-1 text-[11px] text-obs-text shadow-sm">
           {leafMode
             ? `${elements.filter((e) => (e.data as { tmLeaf?: boolean }).tmLeaf).length} devices${hiddenLeafCount ? ` (+${hiddenLeafCount} hidden)` : ""}`
             : `${focusNode?.children.length ?? 0} children — click to drill down`}
+        </div>
+        <div className="absolute bottom-3 left-2 flex flex-col gap-1">
+          <button
+            className="w-7 h-7 flex items-center justify-center bg-obs-card/90 border border-obs-border rounded text-obs-mute hover:text-obs-text hover:border-obs-blue shadow-sm transition-colors text-sm"
+            onClick={() => zoomBy(1.5)}
+            title="Zoom in (50%)"
+          >+</button>
+          <button
+            className="w-7 h-7 flex items-center justify-center bg-obs-card/90 border border-obs-border rounded text-obs-mute hover:text-obs-text hover:border-obs-blue shadow-sm transition-colors text-sm"
+            onClick={() => zoomBy(1 / 1.5)}
+            title="Zoom out (50%)"
+          >−</button>
         </div>
       </div>
     </div>

@@ -108,10 +108,34 @@ export interface SqlEntry {
   params: string;
   duration_ms: number;
   rows: number;
+  rows_examined?: number;
 }
 
-export async function fetchSqlLog(): Promise<SqlEntry[]> {
-  const res = await fetch("/api/admin/sql");
-  const data = await jsonOrThrow<{ entries: SqlEntry[] }>(res);
+export async function fetchExporterSql(): Promise<{ entries: SqlEntry[] }> {
+  const res = await fetch("/api/admin/exporter-sql");
+  return jsonOrThrow<{ entries: SqlEntry[] }>(res);
+}
+
+export interface ScheduleEntry {
+  id: string;
+  time: string;        // "HH:MM"
+  dns: boolean;
+  enabled: boolean;
+  last_run_at: number | null;  // Unix timestamp, written by scheduler
+}
+
+export async function fetchSchedule(): Promise<ScheduleEntry[]> {
+  const res = await fetch("/api/admin/schedule");
+  const data = await jsonOrThrow<{ entries: ScheduleEntry[] }>(res);
+  return data.entries;
+}
+
+export async function saveSchedule(entries: ScheduleEntry[]): Promise<ScheduleEntry[]> {
+  const res = await fetch("/api/admin/schedule", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entries),
+  });
+  const data = await jsonOrThrow<{ entries: ScheduleEntry[] }>(res);
   return data.entries;
 }

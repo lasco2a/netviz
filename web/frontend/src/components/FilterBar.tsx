@@ -92,7 +92,7 @@ function Chip({
       : color === "red"
         ? "bg-red-600 text-white border-red-700"
         : "bg-obs-blue text-white border-obs-blue"
-    : "bg-white text-obs-text border-obs-border hover:bg-obs-surface";
+    : "bg-obs-card text-obs-text border-obs-border hover:bg-obs-surface";
   return (
     <button
       onClick={onClick}

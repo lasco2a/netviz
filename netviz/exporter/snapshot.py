@@ -137,11 +137,23 @@ def _normalise_mac(raw: str | None) -> str:
     return ":".join(s[i : i + 2] for i in range(0, 12, 2))
 
 
+_RUN_LOG: list[dict[str, Any]] = []
+
+
 def _fetch(conn, sql: str) -> list[dict[str, Any]]:
     cur = conn.cursor(dictionary=True)
     try:
+        t_mono = time.monotonic()
         cur.execute(sql)
-        return cur.fetchall()
+        result = cur.fetchall()
+        _RUN_LOG.append({
+            "ts": time.time(),
+            "sql": sql.strip(),
+            "params": "",
+            "duration_ms": round((time.monotonic() - t_mono) * 1000, 1),
+            "rows": len(result),
+        })
+        return result
     finally:
         cur.close()
 
@@ -411,6 +423,8 @@ def _atomic_write_json(path: Path, payload: Any) -> None:
 
 def write_snapshot(out_dir: Path | None = None) -> dict[str, Any]:
     """Run the full export. Returns the meta block."""
+    global _RUN_LOG
+    _RUN_LOG = []
     out = (out_dir or SNAPSHOT_DIR).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
@@ -437,6 +451,10 @@ def write_snapshot(out_dir: Path | None = None) -> dict[str, Any]:
         os.rename(new_dir, old_dir)
         if backup_dir.exists():
             shutil.rmtree(backup_dir)
+
+        (out / ".exporter_sql.json").write_text(
+            json.dumps(_RUN_LOG, ensure_ascii=False), encoding="utf-8"
+        )
 
         return snapshot["meta"]
     finally:

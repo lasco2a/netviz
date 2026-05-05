@@ -26,7 +26,7 @@ export function Login() {
     <div className="min-h-full flex items-center justify-center bg-obs-surface">
       <form
         onSubmit={submit}
-        className="bg-white border border-obs-border shadow-sm rounded p-6 w-80"
+        className="bg-obs-card border border-obs-border shadow-sm rounded p-6 w-80"
       >
         <h1 className="text-lg font-semibold text-obs-navy mb-4">netviz</h1>
         <p className="text-obs-mute text-xs mb-4">
@@ -35,14 +35,14 @@ export function Login() {
         <label className="block text-xs text-obs-mute mb-1">Username</label>
         <input
           autoFocus
-          className="w-full mb-3 px-2 py-1 border border-obs-border rounded text-sm"
+          className="w-full mb-3 px-2 py-1 border border-obs-border rounded text-sm bg-obs-card text-obs-text"
           value={username}
           onChange={(e) => setU(e.target.value)}
         />
         <label className="block text-xs text-obs-mute mb-1">Password</label>
         <input
           type="password"
-          className="w-full mb-4 px-2 py-1 border border-obs-border rounded text-sm"
+          className="w-full mb-4 px-2 py-1 border border-obs-border rounded text-sm bg-obs-card text-obs-text"
           value={password}
           onChange={(e) => setP(e.target.value)}
         />

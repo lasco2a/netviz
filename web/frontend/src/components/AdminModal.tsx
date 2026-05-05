@@ -13,6 +13,9 @@ export function AdminModal() {
   const [error, setError] = useState<string | null>(null);
   // Two-confirmation flow for forcing DNS while NETVIZ_DNS_ENABLED=false.
   const [dnsConfirm, setDnsConfirm] = useState<0 | 1 | 2>(0);
+  const [snapConfirm, setSnapConfirm] = useState(false);
+  const [dnsEnabledConfirm, setDnsEnabledConfirm] = useState(false);
+  const [triggered, setTriggered] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +47,8 @@ export function AdminModal() {
     setError(null);
     try {
       await api.adminRefresh(kind, { dns_force: dnsForce });
+      setTriggered(kind);
+      setTimeout(() => setTriggered(null), 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "request failed");
     }
@@ -60,7 +65,7 @@ export function AdminModal() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="bg-white rounded shadow-xl w-full max-w-3xl flex flex-col"
+        className="bg-obs-card rounded shadow-xl w-full max-w-3xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 py-2 border-b border-obs-border flex items-center justify-between">
@@ -94,13 +99,37 @@ export function AdminModal() {
                 {config?.snapshot.endpoint_count ?? 0} ({config?.snapshot.endpoint_resolved ?? 0})
               </div>
             </div>
-            <button
-              disabled={!!cur}
-              onClick={() => trigger("exporter")}
-              className="mt-2 px-3 py-1 text-xs bg-obs-blue text-white rounded disabled:opacity-50"
-            >
-              Refresh snapshot now
-            </button>
+            {!snapConfirm ? (
+              <button
+                disabled={!!cur}
+                onClick={() => setSnapConfirm(true)}
+                className="mt-2 px-3 py-1 text-xs bg-obs-blue text-white rounded disabled:opacity-50"
+              >
+                Refresh snapshot now
+              </button>
+            ) : (
+              <div className="mt-2 p-2 border border-obs-warn rounded text-xs space-y-2">
+                <p>Re-run the Observium exporter and reload snapshot data. Continue?</p>
+                <div className="flex gap-2">
+                  <button
+                    disabled={!!cur}
+                    onClick={async () => { await trigger("exporter"); setSnapConfirm(false); }}
+                    className="px-2 py-0.5 bg-obs-blue text-white rounded disabled:opacity-50"
+                  >
+                    Run now
+                  </button>
+                  <button
+                    onClick={() => setSnapConfirm(false)}
+                    className="px-2 py-0.5 border border-obs-border rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {triggered === "exporter" && (
+              <p className="text-xs text-obs-accent mt-1">Job started — see Last job for progress.</p>
+            )}
           </section>
 
           <section>
@@ -112,13 +141,39 @@ export function AdminModal() {
               </span>
             </div>
             {dnsEnabled ? (
-              <button
-                disabled={!!cur}
-                onClick={() => trigger("dns")}
-                className="mt-2 px-3 py-1 text-xs bg-obs-blue text-white rounded disabled:opacity-50"
-              >
-                Run DNS resolver now
-              </button>
+              <>
+                {!dnsEnabledConfirm ? (
+                  <button
+                    disabled={!!cur}
+                    onClick={() => setDnsEnabledConfirm(true)}
+                    className="mt-2 px-3 py-1 text-xs bg-obs-blue text-white rounded disabled:opacity-50"
+                  >
+                    Run DNS resolver now
+                  </button>
+                ) : (
+                  <div className="mt-2 p-2 border border-obs-warn rounded text-xs space-y-2">
+                    <p>Run reverse DNS lookups for all endpoints. Continue?</p>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={!!cur}
+                        onClick={async () => { await trigger("dns"); setDnsEnabledConfirm(false); }}
+                        className="px-2 py-0.5 bg-obs-blue text-white rounded disabled:opacity-50"
+                      >
+                        Run now
+                      </button>
+                      <button
+                        onClick={() => setDnsEnabledConfirm(false)}
+                        className="px-2 py-0.5 border border-obs-border rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {triggered === "dns" && (
+                  <p className="text-xs text-obs-accent mt-1">Job started — see Last job for progress.</p>
+                )}
+              </>
             ) : (
               <div className="mt-2 space-y-2">
                 {dnsConfirm === 0 && (
@@ -172,6 +227,9 @@ export function AdminModal() {
                     </div>
                   </div>
                 )}
+                {triggered === "dns" && (
+                  <p className="text-xs text-obs-accent mt-1">Job started — see Last job for progress.</p>
+                )}
               </div>
             )}
           </section>
@@ -187,7 +245,7 @@ export function AdminModal() {
                   {display.running ? (
                     <span className="text-obs-warn">running\u2026</span>
                   ) : (
-                    <span className={display.return_code === 0 ? "text-green-700" : "text-obs-danger"}>
+                      <span className={display.return_code === 0 ? "text-obs-accent" : "text-obs-danger"}>
                       exit {display.return_code}
                     </span>
                   )}

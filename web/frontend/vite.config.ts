@@ -16,9 +16,9 @@ export default defineConfig({
     port: 5173,
     host: "0.0.0.0",
     proxy: {
-      "/api": "http://127.0.0.1:8080",
-      "/snapshot.json": "http://127.0.0.1:8080",
-      "/device": "http://127.0.0.1:8080",
+      "/api": "http://127.0.0.1:8181",
+      "/snapshot.json": "http://127.0.0.1:8181",
+      "/device": "http://127.0.0.1:8181",
     },
   },
   build: {

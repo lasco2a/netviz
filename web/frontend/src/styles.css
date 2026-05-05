@@ -2,11 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme-aware color tokens ───────────────────────────────────────────────
+   Values are space-separated RGB channels so Tailwind opacity modifiers work:
+   e.g. bg-obs-surface/70 → rgba(var(--obs-surface), 0.7)                    */
+
+:root {
+  --obs-card:    255 255 255;   /* panel / component bg  */
+  --obs-surface: 245 247 250;   /* page bg, row hovers   */
+  --obs-border:  217 222 228;   /* dividers, input rings */
+  --obs-text:    31  45  61;    /* body text             */
+  --obs-mute:    122 134 148;   /* secondary / labels    */
+}
+
+.dark {
+  --obs-card:    26  34  52;    /* #1a2234 */
+  --obs-surface: 18  25  41;    /* #121929 */
+  --obs-border:  45  59  78;    /* #2d3b4e */
+  --obs-text:    203 213 225;   /* #cbd5e1 */
+  --obs-mute:    110 128 148;   /* #6e8094 */
+}
+
 html, body, #root { height: 100%; }
+
 body {
   font-family: "Helvetica Neue", Tahoma, Arial, sans-serif;
   font-size: 13px;
-  color: #1f2d3d;
-  background: #f5f7fa;
+  color: rgb(var(--obs-text));
+  background: rgb(var(--obs-surface));
   margin: 0;
 }

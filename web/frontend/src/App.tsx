@@ -31,6 +31,13 @@ export function App() {
   const loadingSnapshot = useApp((s) => s.loadingSnapshot);
   const snapshotError = useApp((s) => s.snapshotError);
   const viewMode = useApp((s) => s.viewMode);
+  const theme = useApp((s) => s.theme);
+
+  // Keep the <html> class in sync with the theme so Tailwind's dark: variants
+  // and CSS variable overrides both activate correctly.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   // Panel resize state.
   const [leftW, setLeftW] = useState(LEFT_DEFAULT);
@@ -120,10 +127,17 @@ export function App() {
               />
             ) : (
               <div
-                className="flex-shrink-0 overflow-hidden"
+                className="flex-shrink-0 overflow-hidden relative"
                 style={{ width: leftW }}
               >
                 <LocationTree />
+                <button
+                  className="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center bg-obs-card/80 border border-obs-border rounded text-[10px] text-obs-mute hover:text-obs-navy hover:border-obs-blue transition-colors"
+                  onClick={() => setLeftCollapsed(true)}
+                  title="Collapse left panel"
+                >
+                  ‹
+                </button>
               </div>
             )}
 
@@ -132,7 +146,6 @@ export function App() {
               <DragHandle
                 side="left"
                 onDragStart={(e) => startDrag("left", e)}
-                onCollapse={() => setLeftCollapsed(true)}
               />
             )}
           </>
@@ -161,7 +174,6 @@ export function App() {
               <DragHandle
                 side="right"
                 onDragStart={(e) => startDrag("right", e)}
-                onCollapse={() => setRightCollapsed(true)}
               />
             )}
 
@@ -172,10 +184,17 @@ export function App() {
               />
             ) : (
               <div
-                className="flex-shrink-0 overflow-hidden"
+                className="flex-shrink-0 overflow-hidden relative"
                 style={{ width: rightW }}
               >
                 <DeviceDrawer />
+                <button
+                  className="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center bg-obs-card/80 border border-obs-border rounded text-[10px] text-obs-mute hover:text-obs-navy hover:border-obs-blue transition-colors"
+                  onClick={() => setRightCollapsed(true)}
+                  title="Collapse right panel"
+                >
+                  ›
+                </button>
               </div>
             )}
           </>
@@ -192,10 +211,9 @@ export function App() {
 interface DragHandleProps {
   side: "left" | "right";
   onDragStart: (e: React.MouseEvent) => void;
-  onCollapse: () => void;
 }
 
-function DragHandle({ side, onDragStart, onCollapse }: DragHandleProps) {
+function DragHandle({ onDragStart }: DragHandleProps) {
   return (
     <div
       className="flex-shrink-0 w-2 cursor-col-resize relative group flex items-center justify-center bg-obs-surface hover:bg-obs-blue/10 border-x border-obs-border/50 transition-colors"
@@ -203,15 +221,6 @@ function DragHandle({ side, onDragStart, onCollapse }: DragHandleProps) {
     >
       {/* visible grip line */}
       <div className="w-px h-10 bg-obs-border group-hover:bg-obs-blue transition-colors" />
-      {/* collapse button — appears on hover */}
-      <button
-        className="absolute top-1/2 -translate-y-1/2 w-4 h-6 bg-white border border-obs-border rounded-sm text-[10px] text-obs-mute hover:text-obs-navy hover:border-obs-blue opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={onCollapse}
-        title={side === "left" ? "Collapse left panel" : "Collapse right panel"}
-      >
-        {side === "left" ? "‹" : "›"}
-      </button>
     </div>
   );
 }

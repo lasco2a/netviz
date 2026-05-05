@@ -19,13 +19,13 @@ export function LocationTree() {
   const root = index?.raw.trees[treeSource] ?? null;
 
   return (
-    <div className="h-full flex flex-col bg-white border-r border-obs-border">
+    <div className="h-full flex flex-col bg-obs-card border-r border-obs-border">
       <div className="px-3 py-2 border-b border-obs-border flex items-center gap-2">
         <span className="text-xs text-obs-mute">Tree</span>
         <select
           value={treeSource}
           onChange={(e) => setTreeSource(e.target.value as TreeSource)}
-          className="text-xs border border-obs-border rounded px-1 py-0.5 bg-white"
+          className="text-xs border border-obs-border rounded px-1 py-0.5 bg-obs-card text-obs-text"
         >
           {SOURCES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -75,7 +75,7 @@ function TreeBranch({ node, depth }: { node: TreeNode; depth: number }) {
     <div>
       <div
         className={`flex items-center pr-2 py-0.5 cursor-pointer hover:bg-obs-surface ${
-          isSelected ? "bg-blue-50 border-l-2 border-obs-blue" : ""
+          isSelected ? "bg-obs-blue/10 border-l-2 border-obs-blue" : ""
         }`}
         style={{ paddingLeft: 6 + depth * 12 }}
         onClick={() => {

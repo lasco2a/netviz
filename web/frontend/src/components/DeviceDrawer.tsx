@@ -9,7 +9,7 @@ export function DeviceDrawer() {
 
   if (id == null) {
     return (
-      <div className="h-full bg-white border-l border-obs-border p-4 text-obs-mute text-sm">
+      <div className="h-full bg-obs-card border-l border-obs-border p-4 text-obs-mute text-sm">
         Select a device to see details.
       </div>
     );
@@ -17,7 +17,7 @@ export function DeviceDrawer() {
 
   if (loading || !detail) {
     return (
-      <div className="h-full bg-white border-l border-obs-border p-4 text-obs-mute text-sm">
+      <div className="h-full bg-obs-card border-l border-obs-border p-4 text-obs-mute text-sm">
         Loading device {id}\u2026
       </div>
     );
@@ -26,7 +26,7 @@ export function DeviceDrawer() {
   const d = detail.device;
   const HeaderIcon = iconComponentFor(d.role);
   return (
-    <div className="h-full bg-white border-l border-obs-border flex flex-col">
+    <div className="h-full bg-obs-card border-l border-obs-border flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b border-obs-border">
         <div className="flex items-center gap-2 min-w-0">
           <HeaderIcon

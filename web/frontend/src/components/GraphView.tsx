@@ -31,8 +31,8 @@ export function GraphView() {
   const graphLayout = useApp((s) => s.graphLayout);
   const setGraphLayout = useApp((s) => s.setGraphLayout);
 
-  // Zoom step for double-click. Kept as local view state (not URL-persisted).
-  const [zoomStep, setZoomStep] = useState(15); // percent, e.g. 15 => ×1.15
+  // Zoom step for double-click and +/- buttons. Local view state (not URL-persisted).
+  const [zoomStep, setZoomStep] = useState(50); // percent, e.g. 50 => ×1.50
   const zoomStepRef = useRef(zoomStep);
   zoomStepRef.current = zoomStep;
   const search = useApp((s) => s.filters.search);
@@ -270,21 +270,33 @@ export function GraphView() {
   if (!index) {
     return <div className="p-6 text-obs-mute text-sm">No snapshot loaded.</div>;
   }
+
+  function zoomBy(factor: number) {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const next = Math.min(Math.max(cy.zoom() * factor, cy.minZoom()), cy.maxZoom());
+    cy.animate({
+      zoom: { level: next, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } },
+      duration: 150,
+      easing: "ease-in-out-cubic",
+    });
+  }
+
   const visibleEdges = elements.filter((e) => "source" in (e.data as object))
     .length;
   const visibleNodes = elements.length - visibleEdges;
 
   return (
-    <div className="relative h-full w-full bg-white">
+    <div className="relative h-full w-full bg-obs-card">
       <div ref={containerRef} className="absolute inset-0" />
-      <div className="absolute top-2 left-2 bg-white/90 border border-obs-border rounded px-2 py-1 text-[11px] text-obs-text shadow-sm flex items-center gap-3">
+      <div className="absolute top-2 left-2 bg-obs-card/90 border border-obs-border rounded px-2 py-1 text-[11px] text-obs-text shadow-sm flex items-center gap-3">
         <span>
           {visibleNodes} nodes &middot; {visibleEdges} edges
         </span>
         <label className="flex items-center gap-1">
           <span className="text-obs-mute">layout</span>
           <select
-            className="border border-obs-border rounded px-1 py-0.5 bg-white text-obs-text text-[11px]"
+            className="border border-obs-border rounded px-1 py-0.5 bg-obs-card text-obs-text text-[11px]"
             value={graphLayout}
             onChange={(e) =>
               setGraphLayout(e.target.value as typeof graphLayout)
@@ -317,7 +329,7 @@ export function GraphView() {
               const v = Math.max(1, Math.min(200, Number(e.target.value)));
               if (!isNaN(v)) setZoomStep(v);
             }}
-            className="w-12 border border-obs-border rounded px-1 py-0.5 bg-white text-obs-text text-[11px] text-right"
+            className="w-12 border border-obs-border rounded px-1 py-0.5 bg-obs-card text-obs-text text-[11px] text-right"
           />
           <span className="text-obs-mute">%</span>
         </label>
@@ -351,6 +363,18 @@ export function GraphView() {
           </label>
         )}
       </div>
+      <div className="absolute bottom-3 left-2 flex flex-col gap-1">
+        <button
+          className="w-7 h-7 flex items-center justify-center bg-obs-card/90 border border-obs-border rounded text-obs-mute hover:text-obs-text hover:border-obs-blue shadow-sm transition-colors text-sm"
+          onClick={() => zoomBy(1 + zoomStep / 100)}
+          title={`Zoom in (${zoomStep}%)`}
+        >+</button>
+        <button
+          className="w-7 h-7 flex items-center justify-center bg-obs-card/90 border border-obs-border rounded text-obs-mute hover:text-obs-text hover:border-obs-blue shadow-sm transition-colors text-sm"
+          onClick={() => zoomBy(1 / (1 + zoomStep / 100))}
+          title={`Zoom out (${zoomStep}%)`}
+        >−</button>
+      </div>
       <Legend />
     </div>
   );
@@ -358,7 +382,7 @@ export function GraphView() {
 
 function Legend() {
   return (
-    <div className="absolute bottom-2 right-2 bg-white/95 border border-obs-border rounded px-3 py-2 text-[10px] text-obs-text shadow-sm space-y-1 leading-tight">
+    <div className="absolute bottom-2 right-2 bg-obs-card/95 border border-obs-border rounded px-3 py-2 text-[10px] text-obs-text shadow-sm space-y-1 leading-tight">
       <div className="font-semibold text-obs-mute uppercase tracking-wide text-[9px] mb-1">
         Legend
       </div>
