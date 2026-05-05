@@ -1,14 +1,18 @@
 import cytoscape from "cytoscape";
-// No types ship with cytoscape-fcose.
+// No types ship with cytoscape-fcose / dagre / elk.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import fcose from "cytoscape-fcose";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import dagre from "cytoscape-dagre";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import elk from "cytoscape-elk";
 
 cytoscape.use(fcose);
 cytoscape.use(dagre);
+cytoscape.use(elk);
 
 // Visual styles. Designed to match the Observium navy/blue palette.
 export const cyStyle: cytoscape.StylesheetStyle[] = [
@@ -170,6 +174,149 @@ export const dagreLayout: cytoscape.LayoutOptions = {
   animate: false,
 };
 
+// ---------------------------------------------------------------------------
+// GraphView layout presets
+// ---------------------------------------------------------------------------
+
+export type GraphLayout =
+  | "fcose"
+  | "dagre-tb"
+  | "dagre-lr"
+  | "bfs"
+  | "circle"
+  | "concentric"
+  | "grid"
+  | "elk";
+
+export const GRAPH_LAYOUTS: GraphLayout[] = [
+  "fcose",
+  "dagre-tb",
+  "dagre-lr",
+  "bfs",
+  "circle",
+  "concentric",
+  "grid",
+  "elk",
+];
+
+export const GRAPH_LAYOUT_LABELS: Record<GraphLayout, string> = {
+  fcose: "Force",
+  "dagre-tb": "Pyramid",
+  "dagre-lr": "Horizontal",
+  bfs: "Breadth-first",
+  circle: "Circle",
+  concentric: "Concentric (sphere-like)",
+  grid: "Grid",
+  elk: "ELK (layered)",
+};
+
+// Pick a sensible BFS root: the cytoscape-selected node, else the highest-degree
+// node, else the first one. Returned as a single-element selector array (the
+// shape `breadthfirst.roots` expects).
+function bfsRoots(cy: cytoscape.Core): string[] | undefined {
+  const sel = cy.nodes(":selected").first();
+  if (sel.nonempty()) return [`#${sel.id()}`];
+  let best: cytoscape.NodeSingular | null = null;
+  let bestDeg = -1;
+  cy.nodes().forEach((n) => {
+    if (n.data("ghost") || n.data("cluster")) return;
+    const d = n.degree(true);
+    if (d > bestDeg) {
+      bestDeg = d;
+      best = n;
+    }
+  });
+  if (best) return [`#${(best as cytoscape.NodeSingular).id()}`];
+  const first = cy.nodes().first();
+  return first.nonempty() ? [`#${first.id()}`] : undefined;
+}
+
+// Build cytoscape layout options for the given preset. `cy` is required for
+// presets that need to inspect the graph (e.g. BFS root selection).
+export function layoutOptionsFor(
+  name: GraphLayout,
+  cy: cytoscape.Core,
+): cytoscape.LayoutOptions {
+  switch (name) {
+    case "fcose":
+      return fcoseLayout;
+    case "dagre-tb":
+      return {
+        name: "dagre",
+        // @ts-expect-error dagre options are typed loosely
+        rankDir: "TB",
+        nodeSep: 40,
+        rankSep: 80,
+        edgeSep: 15,
+        fit: true,
+        padding: 30,
+        animate: false,
+      };
+    case "dagre-lr":
+      return {
+        name: "dagre",
+        // @ts-expect-error dagre options are typed loosely
+        rankDir: "LR",
+        nodeSep: 25,
+        rankSep: 100,
+        edgeSep: 12,
+        fit: true,
+        padding: 30,
+        animate: false,
+      };
+    case "bfs":
+      return {
+        name: "breadthfirst",
+        directed: true,
+        spacingFactor: 1.2,
+        roots: bfsRoots(cy),
+        padding: 30,
+        fit: true,
+        animate: false,
+      };
+    case "circle":
+      return {
+        name: "circle",
+        padding: 30,
+        fit: true,
+        animate: false,
+        spacingFactor: 1.2,
+      };
+    case "concentric":
+      return {
+        name: "concentric",
+        padding: 30,
+        fit: true,
+        animate: false,
+        concentric: (n: cytoscape.NodeSingular) => n.degree(true) ?? 0,
+        levelWidth: () => 4,
+        minNodeSpacing: 30,
+      };
+    case "grid":
+      return {
+        name: "grid",
+        padding: 30,
+        fit: true,
+        animate: false,
+        avoidOverlapPadding: 12,
+      };
+    case "elk":
+      return {
+        name: "elk",
+        // @ts-expect-error elk options are typed loosely
+        elk: {
+          algorithm: "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": 30,
+          "elk.layered.spacing.nodeNodeBetweenLayers": 60,
+        },
+        fit: true,
+        padding: 30,
+        animate: false,
+      };
+  }
+}
+
 // Tree-Map specific styles.
 export const treeMapStyle: cytoscape.StylesheetStyle[] = [
   {
@@ -211,34 +358,16 @@ export const treeMapStyle: cytoscape.StylesheetStyle[] = [
     },
   },
   {
+    // Tree-map device leaf: same geometry as graph nodes (small icon + label
+    // below). Inherits width/height/text-valign/font-size from the base node
+    // style and gets the role icon via the shared `node[iconUrl]` rule.
     selector: "node[?tmLeaf]",
     style: {
       "background-color": "#eef3f8",
       "border-color": "#3aa0e6",
       "border-width": 1,
       shape: "roundrectangle",
-      label: "data(label)",
-      color: "#1f2d3d",
-      "text-valign": "center",
-      "text-halign": "right",
-      "text-margin-x": 4,
-      "font-size": 9,
-      "text-background-opacity": 0,
-      width: "label",
-      height: 22,
-      padding: "6px 6px 6px 22px",
-      "background-image": "data(iconUrl)",
-      "background-fit": "none",
-      "background-width": "16px",
-      "background-height": "16px",
-      "background-position-x": "4px",
-      "background-position-y": "50%",
-      "background-clip": "none",
     },
-  },
-  {
-    selector: 'node[?tmLeaf][status = 0]',
-    style: { "border-color": "#d9534f", "border-width": 2, "background-image-opacity": 0.55 },
   },
   {
     // tmFocus device may carry an icon when focused on a device.

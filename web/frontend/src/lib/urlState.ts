@@ -9,6 +9,10 @@
 import { useEffect } from "react";
 
 import { useApp } from "@/store/app";
+import {
+  GRAPH_LAYOUTS,
+  type GraphLayout,
+} from "@/lib/cytoscape-config";
 import { DEVICE_ROLES, type DeviceRole } from "@/lib/types";
 
 interface UrlState {
@@ -20,10 +24,13 @@ interface UrlState {
   dev?: number;
   roles?: DeviceRole[];
   status?: number[];
+  layout?: GraphLayout;
   help?: string;
 }
 
 const ROLE_SET = new Set<string>(DEVICE_ROLES);
+const LAYOUT_SET = new Set<string>(GRAPH_LAYOUTS);
+const DEFAULT_LAYOUT: GraphLayout = "dagre-tb";
 
 function readHash(): UrlState {
   const raw = window.location.hash.slice(1);
@@ -47,6 +54,8 @@ function readHash(): UrlState {
       else if (k === "dev") {
         const n = Number(v);
         if (!isNaN(n)) out.dev = n;
+      } else if (k === "layout") {
+        if (LAYOUT_SET.has(v)) out.layout = v as GraphLayout;
       } else (out as Record<string, unknown>)[k] = v;
     }
     return out;
@@ -66,6 +75,8 @@ function writeHash(state: UrlState): void {
   if (state.roles && state.roles.length) params.set("roles", state.roles.join(","));
   if (state.status && state.status.length)
     params.set("status", state.status.join(","));
+  if (state.layout && state.layout !== DEFAULT_LAYOUT)
+    params.set("layout", state.layout);
   const next = params.toString();
   const target = next ? `#${next}` : "";
   if (window.location.hash !== target) {
@@ -92,6 +103,7 @@ export function hydrateFromHash(): void {
   if (u.dev != null) s.selectDevice(u.dev);
   if (u.roles) for (const r of u.roles) s.toggleRole(r);
   if (u.status) for (const st of u.status) s.toggleStatus(st);
+  if (u.layout) s.setGraphLayout(u.layout);
 }
 
 // React hook: subscribes to store changes and writes them back to the hash.
@@ -115,6 +127,7 @@ export function useUrlSync(): void {
         dev: s.selectedDeviceId ?? undefined,
         roles: Array.from(s.filters.roles),
         status: Array.from(s.filters.statuses),
+        layout: s.graphLayout,
       });
     });
     return unsub;

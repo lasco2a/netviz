@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
 import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
 
-import { cyStyle, fcoseLayout } from "@/lib/cytoscape-config";
+import {
+  cyStyle,
+  GRAPH_LAYOUTS,
+  GRAPH_LAYOUT_LABELS,
+  layoutOptionsFor,
+} from "@/lib/cytoscape-config";
 import { iconUrlFor } from "@/lib/deviceIcon";
 import { useFilteredDeviceIds } from "@/lib/filters";
 import type { TreeNode } from "@/lib/types";
@@ -23,6 +28,8 @@ export function GraphView() {
   const setClusterMode = useApp((s) => s.setClusterMode);
   const collapseClusters = useApp((s) => s.collapseClusters);
   const toggleCollapse = useApp((s) => s.toggleCollapseClusters);
+  const graphLayout = useApp((s) => s.graphLayout);
+  const setGraphLayout = useApp((s) => s.setGraphLayout);
   const search = useApp((s) => s.filters.search);
   const visible = useFilteredDeviceIds();
 
@@ -180,7 +187,7 @@ export function GraphView() {
     };
   }, [selectDevice]);
 
-  // Sync elements -> cy and re-layout.
+  // Sync elements -> cy.
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -188,12 +195,16 @@ export function GraphView() {
       cy.elements().remove();
       cy.add(elements);
     });
-    if (elements.length) {
-      const layout = cy.layout(fcoseLayout);
-      layout.one("layoutstop", () => cy.fit(undefined, 30));
-      layout.run();
-    }
   }, [elements]);
+
+  // Run / re-run layout when elements OR layout selection changes.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || cy.elements().length === 0) return;
+    const layout = cy.layout(layoutOptionsFor(graphLayout, cy));
+    layout.one("layoutstop", () => cy.fit(undefined, 30));
+    layout.run();
+  }, [elements, graphLayout]);
 
   // Highlight current selection.
   useEffect(() => {
@@ -248,6 +259,22 @@ export function GraphView() {
         <span>
           {visibleNodes} nodes &middot; {visibleEdges} edges
         </span>
+        <label className="flex items-center gap-1">
+          <span className="text-obs-mute">layout</span>
+          <select
+            className="border border-obs-border rounded px-1 py-0.5 bg-white text-obs-text text-[11px]"
+            value={graphLayout}
+            onChange={(e) =>
+              setGraphLayout(e.target.value as typeof graphLayout)
+            }
+          >
+            {GRAPH_LAYOUTS.map((k) => (
+              <option key={k} value={k}>
+                {GRAPH_LAYOUT_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
@@ -256,9 +283,20 @@ export function GraphView() {
           />
           <span>ghosts</span>
         </label>
-        <label className="flex items-center gap-1 cursor-pointer">
+        <label
+          className={
+            "flex items-center gap-1 " +
+            (graphLayout === "fcose" ? "cursor-pointer" : "opacity-50 cursor-not-allowed")
+          }
+          title={
+            graphLayout === "fcose"
+              ? undefined
+              : "Cluster mode requires the Force layout"
+          }
+        >
           <input
             type="checkbox"
+            disabled={graphLayout !== "fcose"}
             checked={clusterMode === "tree"}
             onChange={(e) => setClusterMode(e.target.checked ? "tree" : "off")}
           />

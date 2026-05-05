@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import * as api from "@/lib/api";
+import type { GraphLayout } from "@/lib/cytoscape-config";
 import { buildIndex, type SnapshotIndex } from "@/lib/snapshotIndex";
 import type { DeviceDetail, DeviceRole, MeUser, TreeSource } from "@/lib/types";
 
@@ -35,6 +36,7 @@ interface AppState {
   showGhostEndpoints: boolean;
   clusterMode: "off" | "tree";
   collapseClusters: boolean;
+  graphLayout: GraphLayout;
   // Modals
   helpOpen: string | null; // null = closed; otherwise section anchor
   adminOpen: boolean;
@@ -50,6 +52,7 @@ interface AppState {
   toggleGhostEndpoints: () => void;
   setClusterMode: (m: "off" | "tree") => void;
   toggleCollapseClusters: () => void;
+  setGraphLayout: (l: GraphLayout) => void;
   selectTreeNode: (id: string | null) => void;
   selectDevice: (id: number | null) => Promise<void>;
   setSearch: (s: string) => void;
@@ -85,6 +88,7 @@ export const useApp = create<AppState>((set, get) => ({
   showGhostEndpoints: false,
   clusterMode: "off",
   collapseClusters: false,
+  graphLayout: "dagre-tb",
   helpOpen: null,
   adminOpen: false,
 
@@ -144,11 +148,21 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   setClusterMode(m) {
-    set({ clusterMode: m });
+    // Cluster mode requires fcose for compound layout. Snap back to Force
+    // when the user enables clustering on a non-fcose layout.
+    if (m === "tree" && get().graphLayout !== "fcose") {
+      set({ clusterMode: m, graphLayout: "fcose" });
+    } else {
+      set({ clusterMode: m });
+    }
   },
 
   toggleCollapseClusters() {
     set({ collapseClusters: !get().collapseClusters });
+  },
+
+  setGraphLayout(l) {
+    set({ graphLayout: l });
   },
 
   selectTreeNode(id) {

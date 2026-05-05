@@ -41,6 +41,12 @@ const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
           The left tree filters by location/group/topology. Status and role
           chips (under the top bar) further narrow what's visible.
         </p>
+        <p>
+          <strong>Graph layouts</strong> — the dropdown in the Graph toolbar
+          switches between Force, Pyramid (default), Horizontal, Breadth-first,
+          Circle, Concentric (sphere-like), Grid and ELK (layered). Cluster-by-tree
+          is only available with the Force layout.
+        </p>
       </div>
     ),
   },

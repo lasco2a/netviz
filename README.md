@@ -180,10 +180,15 @@ a partial snapshot.
   ~200 lines of the running job.
 - **Device drawer**: facts, ports, neighbours, processors, mempools,
   endpoints.
-- **Graph view**: Cytoscape.js + fcose. Click a node to open the drawer.
+- **Graph view**: Cytoscape.js with switchable layouts. Click a node to open the drawer.
+  - **Layout dropdown** in the toolbar — choose between Force (fcose), Pyramid
+    (dagre top-down, the default), Horizontal (dagre LR), Breadth-first, Circle,
+    Concentric (sphere-like, ranked by degree), Grid and ELK (layered). The
+    selection is persisted in the URL hash via `layout=`.
   - **Ghost endpoints** toggle (capped at 1 500 per view).
   - **Cluster by tree** toggle: wraps device nodes in compound parents derived
-    from the top-level tree node.
+    from the top-level tree node. Only available with the Force layout —
+    enabling it from another layout snaps back to Force.
   - **Collapse**: when clustering is on, render only one node per cluster with
     weighted summary edges between clusters — true tree-graph hybrid.
   - Built-in legend overlay.
