@@ -3,6 +3,7 @@ import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
 
 import { cyStyle, fcoseLayout } from "@/lib/cytoscape-config";
 import { useFilteredDeviceIds } from "@/lib/filters";
+import type { TreeNode } from "@/lib/types";
 import { useApp } from "@/store/app";
 
 // Hard cap on rendered ghost endpoints to keep the canvas usable on huge sites.
@@ -13,28 +14,109 @@ export function GraphView() {
   const cyRef = useRef<Core | null>(null);
 
   const index = useApp((s) => s.index);
+  const treeSource = useApp((s) => s.treeSource);
   const selectedDeviceId = useApp((s) => s.selectedDeviceId);
   const selectDevice = useApp((s) => s.selectDevice);
   const showGhosts = useApp((s) => s.showGhostEndpoints);
+  const clusterMode = useApp((s) => s.clusterMode);
+  const setClusterMode = useApp((s) => s.setClusterMode);
+  const collapseClusters = useApp((s) => s.collapseClusters);
+  const toggleCollapse = useApp((s) => s.toggleCollapseClusters);
+  const search = useApp((s) => s.filters.search);
   const visible = useFilteredDeviceIds();
 
-  // Build elements from filtered devices + edges that connect two visible nodes.
+  // Map device_id -> top-level tree-node id (used for clustering).
+  // Built from the active tree's root children: each child becomes a cluster.
+  const deviceClusters: Map<number, { id: string; label: string }> | null =
+    useMemo(() => {
+      if (!index || clusterMode !== "tree") return null;
+      const root = index.raw.trees[treeSource];
+      if (!root) return null;
+      const m = new Map<number, { id: string; label: string }>();
+      for (const child of root.children) {
+        const all = collectDeviceIds(child);
+        const cid = `c:${treeSource}:${child.id}`;
+        for (const did of all) {
+          if (!m.has(did)) m.set(did, { id: cid, label: child.name });
+        }
+      }
+      return m;
+    }, [index, treeSource, clusterMode]);
+
+  // Build elements from filtered devices + edges between visible nodes.
   const elements: ElementDefinition[] = useMemo(() => {
     if (!index) return [];
+
+    // Collapsed cluster mode: render only one node per cluster + summary edges.
+    if (clusterMode === "tree" && collapseClusters && deviceClusters) {
+      const counts = new Map<string, { label: string; count: number }>();
+      for (const id of visible) {
+        const c = deviceClusters.get(id);
+        if (!c) continue;
+        const e = counts.get(c.id) ?? { label: c.label, count: 0 };
+        e.count += 1;
+        counts.set(c.id, e);
+      }
+      const els: ElementDefinition[] = [];
+      for (const [cid, { label, count }] of counts) {
+        els.push({
+          data: { id: cid, label: `${label} (${count})`, collapsed: true, count },
+        });
+      }
+      // Aggregate edges by (clusterA, clusterB).
+      const edgeWeights = new Map<string, number>();
+      for (const e of index.raw.edges) {
+        if (!visible.has(e.a) || !visible.has(e.b)) continue;
+        const ca = deviceClusters.get(e.a)?.id;
+        const cb = deviceClusters.get(e.b)?.id;
+        if (!ca || !cb || ca === cb) continue;
+        const key = ca < cb ? `${ca}|${cb}` : `${cb}|${ca}`;
+        edgeWeights.set(key, (edgeWeights.get(key) ?? 0) + 1);
+      }
+      let i = 0;
+      for (const [key, weight] of edgeWeights) {
+        const [a, b] = key.split("|");
+        els.push({
+          data: { id: `se${i++}`, source: a, target: b, summary: true, weight },
+        });
+      }
+      return els;
+    }
+
     const els: ElementDefinition[] = [];
+    const usedClusters = new Set<string>();
+
     for (const id of visible) {
       const d = index.byId.get(id);
       if (!d) continue;
-      els.push({
-        data: {
-          id: `d${d.device_id}`,
-          label: d.hostname,
-          type: d.type ?? "",
-          status: d.status,
-          device_id: d.device_id,
-        },
-      });
+      const cluster = deviceClusters?.get(d.device_id);
+      const data: Record<string, unknown> = {
+        id: `d${d.device_id}`,
+        label: d.hostname,
+        type: d.type ?? "",
+        status: d.status,
+        device_id: d.device_id,
+      };
+      if (cluster) {
+        data.parent = cluster.id;
+        usedClusters.add(cluster.id);
+      }
+      els.push({ data });
     }
+
+    // Compound parent nodes — must be added with the same ids referenced above.
+    if (deviceClusters) {
+      const seen = new Map<string, string>();
+      for (const { id, label } of deviceClusters.values()) {
+        if (!seen.has(id)) seen.set(id, label);
+      }
+      for (const cid of usedClusters) {
+        els.push({
+          data: { id: cid, label: seen.get(cid) ?? cid, cluster: true },
+        });
+      }
+    }
+
     for (const e of index.raw.edges) {
       if (visible.has(e.a) && visible.has(e.b)) {
         els.push({
@@ -42,19 +124,21 @@ export function GraphView() {
         });
       }
     }
+
     if (showGhosts) {
       let count = 0;
       for (const g of index.raw.ghost_endpoints) {
         if (!visible.has(g.device_id)) continue;
         if (count++ >= MAX_GHOSTS) break;
         const gid = `g${g.id}`;
-        els.push({
-          data: {
-            id: gid,
-            label: g.remote_hostname,
-            ghost: true,
-          },
-        });
+        const cluster = deviceClusters?.get(g.device_id);
+        const data: Record<string, unknown> = {
+          id: gid,
+          label: g.remote_hostname,
+          ghost: true,
+        };
+        if (cluster) data.parent = cluster.id;
+        els.push({ data });
         els.push({
           data: {
             id: `ge${g.id}`,
@@ -66,7 +150,7 @@ export function GraphView() {
       }
     }
     return els;
-  }, [index, visible, showGhosts]);
+  }, [index, visible, showGhosts, deviceClusters, clusterMode, collapseClusters]);
 
   // Initialise cytoscape once.
   useEffect(() => {
@@ -102,7 +186,9 @@ export function GraphView() {
       cy.add(elements);
     });
     if (elements.length) {
-      cy.layout(fcoseLayout).run();
+      const layout = cy.layout(fcoseLayout);
+      layout.one("layoutstop", () => cy.fit(undefined, 30));
+      layout.run();
     }
   }, [elements]);
 
@@ -119,6 +205,31 @@ export function GraphView() {
       }
     }
   }, [selectedDeviceId, elements]);
+
+  // Search highlighting: dim non-matches, mark matches.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !index) return;
+    const q = search.trim().toLowerCase();
+    cy.batch(() => {
+      cy.elements().removeClass("dim match");
+      if (!q) return;
+      const matchIds = new Set<string>();
+      for (const d of index.raw.devices) {
+        const hay = [d.hostname, d.sysName, d.ip, d.location, d.hardware]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (hay.includes(q)) matchIds.add(`d${d.device_id}`);
+      }
+      cy.nodes().forEach((n) => {
+        if (n.data("cluster")) return;
+        if (matchIds.has(n.id())) n.addClass("match");
+        else n.addClass("dim");
+      });
+      cy.edges().addClass("dim");
+    });
+  }, [search, index, elements]);
 
   if (!index) {
     return <div className="p-6 text-obs-mute text-sm">No snapshot loaded.</div>;
@@ -142,7 +253,62 @@ export function GraphView() {
           />
           <span>ghosts</span>
         </label>
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={clusterMode === "tree"}
+            onChange={(e) => setClusterMode(e.target.checked ? "tree" : "off")}
+          />
+          <span>cluster by tree</span>
+        </label>
+        {clusterMode === "tree" && (
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={collapseClusters}
+              onChange={() => toggleCollapse()}
+            />
+            <span>collapse</span>
+          </label>
+        )}
+      </div>
+      <Legend />
+    </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="absolute bottom-2 right-2 bg-white/95 border border-obs-border rounded px-3 py-2 text-[10px] text-obs-text shadow-sm space-y-1 leading-tight">
+      <div className="font-semibold text-obs-mute uppercase tracking-wide text-[9px] mb-1">
+        Legend
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-3 h-3 rounded-full bg-[#3aa0e6]" />
+        <span>device (up)</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-3 h-3 rounded-full bg-[#3aa0e6] ring-2 ring-[#d9534f]" />
+        <span>device (down)</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-3 h-3 rotate-45 bg-[#d9534f]" />
+        <span>firewall</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-3 h-3 bg-[#5cb85c]" style={{ clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />
+        <span>wireless</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-2 h-2 rounded-full bg-[#cbd2da]" />
+        <span>ghost endpoint</span>
       </div>
     </div>
   );
+}
+
+function collectDeviceIds(n: TreeNode, out: Set<number> = new Set()): Set<number> {
+  for (const id of n.device_ids) out.add(id);
+  for (const c of n.children) collectDeviceIds(c, out);
+  return out;
 }

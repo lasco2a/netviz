@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { DeviceDrawer } from "@/components/DeviceDrawer";
 import { DeviceTable } from "@/components/DeviceTable";
+import { FilterBar } from "@/components/FilterBar";
 import { GraphView } from "@/components/GraphView";
 import { LocationTree } from "@/components/LocationTree";
 import { Login } from "@/components/Login";
@@ -36,6 +37,7 @@ export function App() {
   return (
     <div className="h-full flex flex-col">
       <TopBar />
+      {index && <FilterBar />}
       {snapshotError && (
         <div className="bg-obs-danger text-white text-xs px-4 py-1">
           Snapshot error: {snapshotError}

@@ -60,6 +60,68 @@ export const cyStyle: cytoscape.StylesheetStyle[] = [
     selector: "node:selected",
     style: { "border-color": "#f0ad4e", "border-width": 3 },
   },
+  // Compound parents (clusters) are styled as soft frames with their label
+  // pinned to the top so they read like swim-lanes in the canvas.
+  {
+    selector: "node[?cluster]",
+    style: {
+      "background-color": "#eef3f8",
+      "background-opacity": 0.6,
+      "border-color": "#9aaab8",
+      "border-width": 1,
+      "border-style": "dashed",
+      shape: "roundrectangle",
+      label: "data(label)",
+      "text-valign": "top",
+      "text-halign": "center",
+      "text-margin-y": -4,
+      "font-size": 10,
+      "font-weight": "bold",
+      color: "#1f2d3d",
+      "text-background-opacity": 0,
+      padding: "12px",
+      "z-index": 0,
+    },
+  },
+  // Dim class is toggled by GraphView during search to fade non-matches.
+  {
+    selector: ".dim",
+    style: { opacity: 0.15, "text-opacity": 0.2 },
+  },
+  {
+    selector: ".match",
+    style: { "border-color": "#f0ad4e", "border-width": 3 },
+  },
+  // Collapsed cluster: rendered as a single solid summary node carrying the
+  // device count. Used when the user enables "collapse" in tree-cluster mode.
+  {
+    selector: "node[?collapsed]",
+    style: {
+      "background-color": "#1f2d3d",
+      "border-color": "#1f2d3d",
+      "border-width": 1,
+      shape: "roundrectangle",
+      label: "data(label)",
+      color: "#ffffff",
+      "text-valign": "center",
+      "text-halign": "center",
+      "font-size": 11,
+      "font-weight": "bold",
+      "text-background-opacity": 0,
+      width: "mapData(count, 1, 200, 40, 110)",
+      height: "mapData(count, 1, 200, 28, 60)",
+    },
+  },
+  // Weighted aggregate edges between collapsed clusters.
+  {
+    selector: "edge[?summary]",
+    style: {
+      "line-color": "#3aa0e6",
+      width: "mapData(weight, 1, 50, 1, 8)",
+      opacity: 0.8,
+      "curve-style": "bezier",
+    },
+  },
   {
     selector: "edge",
     style: {

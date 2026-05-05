@@ -23,6 +23,10 @@ interface AppState {
   // View mode
   viewMode: "table" | "graph";
   showGhostEndpoints: boolean;
+  // Graph clustering: group device nodes under compound parents derived from
+  // the top-level node of the active tree. "off" = flat graph.
+  clusterMode: "off" | "tree";
+  collapseClusters: boolean;
 
   // Actions
   checkSession: () => Promise<void>;
@@ -32,6 +36,8 @@ interface AppState {
   setTreeSource: (s: TreeSource) => void;
   setViewMode: (m: "table" | "graph") => void;
   toggleGhostEndpoints: () => void;
+  setClusterMode: (m: "off" | "tree") => void;
+  toggleCollapseClusters: () => void;
   selectTreeNode: (id: string | null) => void;
   selectDevice: (id: number | null) => Promise<void>;
   setSearch: (s: string) => void;
@@ -53,6 +59,8 @@ export const useApp = create<AppState>((set, get) => ({
   filters: { search: "", types: new Set(), statuses: new Set() },
   viewMode: "table",
   showGhostEndpoints: false,
+  clusterMode: "off",
+  collapseClusters: false,
 
   async checkSession() {
     try {
@@ -103,6 +111,14 @@ export const useApp = create<AppState>((set, get) => ({
 
   toggleGhostEndpoints() {
     set({ showGhostEndpoints: !get().showGhostEndpoints });
+  },
+
+  setClusterMode(m) {
+    set({ clusterMode: m });
+  },
+
+  toggleCollapseClusters() {
+    set({ collapseClusters: !get().collapseClusters });
   },
 
   selectTreeNode(id) {

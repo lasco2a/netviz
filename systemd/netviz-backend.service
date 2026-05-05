@@ -1,0 +1,16 @@
+[Unit]
+Description=netviz FastAPI backend (Observium network visualisation)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/workspace/netviz
+EnvironmentFile=%h/workspace/netviz/.env
+ExecStart=%h/workspace/netviz/.venv/bin/python -m uvicorn netviz.web.backend.main:app \
+    --host ${NETVIZ_HOST} --port ${NETVIZ_PORT} --log-level info
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

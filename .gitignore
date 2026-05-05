@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Environment
+.env
+
+# Snapshot output
+snapshot/snapshot.json
+snapshot/device/
+snapshot/device.new/
+
+# Frontend
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/tsconfig.tsbuildinfo
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

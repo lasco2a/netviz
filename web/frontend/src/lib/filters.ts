@@ -23,7 +23,7 @@ export function useFilteredDeviceIds(): Set<number> {
   for (const id of candidate) {
     const d = index.byId.get(id);
     if (!d) continue;
-    if (filters.types.size && !filters.types.has(d.type ?? "")) continue;
+    if (filters.types.size && !filters.types.has(d.type ?? "unknown")) continue;
     if (filters.statuses.size && !filters.statuses.has(d.status)) continue;
     if (search && !matchesSearch(d, search)) continue;
     out.add(id);

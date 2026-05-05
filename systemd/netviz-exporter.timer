@@ -1,0 +1,13 @@
+[Unit]
+Description=netviz exporter: refresh snapshot every 6 hours
+
+[Timer]
+# Run 2 minutes after boot, then every 6h.
+OnBootSec=2min
+OnUnitActiveSec=6h
+AccuracySec=1min
+Persistent=true
+Unit=netviz-exporter.service
+
+[Install]
+WantedBy=timers.target
