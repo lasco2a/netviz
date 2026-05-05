@@ -12,6 +12,8 @@ __pycache__/
 snapshot/snapshot.json
 snapshot/device/
 snapshot/device.new/
+snapshot/dns_cache.json
+snapshot/.refresh.log
 
 # Frontend
 web/frontend/node_modules/

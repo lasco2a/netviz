@@ -26,6 +26,7 @@ from typing import Any
 
 from netviz import db
 from netviz.config import SNAPSHOT_DIR
+from netviz.dns_resolver import load_cache as load_dns_cache
 from netviz.exporter import trees
 
 
@@ -52,6 +53,28 @@ NEIGHBOUR_COLS = """
     active, protocol, remote_hostname, remote_port, remote_platform,
     remote_address
 """.strip()
+
+
+# `ip_mac` rows are the ARP/bridge entries Observium harvests from each
+# device. They tie an IP+MAC to a switch port and we expose them as
+# "endpoints": un-managed hosts hanging off our managed devices.
+ENDPOINT_COLS = """
+    mac_id, device_id, port_id, mac_ifIndex, mac_address, ip_address, ip_version
+""".strip()
+
+
+def _normalise_mac(raw: str | None) -> str:
+    """Return a canonical lower-case ``aa:bb:cc:dd:ee:ff`` form.
+
+    Observium stores MACs as 12 hex chars in `ip_mac.mac_address`. We accept
+    that and a few common formats defensively.
+    """
+    if not raw:
+        return ""
+    s = "".join(ch for ch in raw if ch.isalnum()).lower()
+    if len(s) != 12:
+        return raw.lower()
+    return ":".join(s[i : i + 2] for i in range(0, 12, 2))
 
 
 def _fetch(conn, sql: str) -> list[dict[str, Any]]:
@@ -89,9 +112,58 @@ def _row(d: dict[str, Any]) -> dict[str, Any]:
     return {k: _serialise(v) for k, v in d.items()}
 
 
+def _collect_endpoints(
+    conn, device_ids: set[int]
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Materialise the global endpoints array.
+
+    De-dups on (mac, ip) so a host visible on multiple switch ports collapses
+    to one row (we keep the first device/port we see). Joins each row with
+    the DNS cache so the frontend doesn't need to know it exists.
+    """
+    rows = _fetch(
+        conn,
+        f"SELECT {ENDPOINT_COLS} FROM ip_mac WHERE ip_address <> ''",
+    )
+    dns = load_dns_cache()
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    resolved = 0
+    for r in rows:
+        ip = r.get("ip_address") or ""
+        mac = _normalise_mac(r.get("mac_address"))
+        if not ip:
+            continue
+        key = (mac, ip)
+        if key in seen:
+            continue
+        seen.add(key)
+        host_entry = dns.get(ip) or {}
+        host = host_entry.get("hostname")
+        if host:
+            resolved += 1
+        out.append(
+            {
+                "id": r["mac_id"],
+                # Endpoints learned on a managed device we're not exporting are
+                # still useful to the user as raw IP/MAC rows; preserve the
+                # device_id even if it's outside our device set.
+                "device_id": r["device_id"] if r["device_id"] in device_ids else None,
+                "port_id": r["port_id"],
+                "ifIndex": r.get("mac_ifIndex"),
+                "mac": mac,
+                "ip": ip,
+                "ip_version": r.get("ip_version"),
+                "hostname": host,
+            }
+        )
+    return out, {"total": len(out), "resolved": resolved}
+
+
 def build_snapshot(conn) -> dict[str, Any]:
     devices_raw = _fetch(conn, f"SELECT {DEVICE_COLS} FROM devices ORDER BY device_id")
     devices = [_row(d) for d in devices_raw]
+    device_ids = {d["device_id"] for d in devices}
 
     neighbours_raw = _fetch(
         conn,
@@ -155,16 +227,21 @@ def build_snapshot(conn) -> dict[str, Any]:
 
     tree_topology = trees.build_topology_tree(devices, edge_pairs)
 
+    endpoints, ep_stats = _collect_endpoints(conn, device_ids)
+
     return {
         "meta": {
             "generated_at": int(time.time()),
             "device_count": len(devices),
             "edge_count": len(resolved_edges),
             "ghost_endpoint_count": len(ghost_endpoints),
+            "endpoint_count": ep_stats["total"],
+            "endpoint_resolved": ep_stats["resolved"],
         },
         "devices": devices,
         "edges": resolved_edges,
         "ghost_endpoints": ghost_endpoints,
+        "endpoints": endpoints,
         "trees": {
             "location": tree_location,
             "groups": tree_groups,
@@ -207,12 +284,40 @@ def build_device_detail(conn, device_id: int) -> dict[str, Any]:
         )
         mempools = cur.fetchall()
 
+        cur.execute(
+            f"SELECT {ENDPOINT_COLS} FROM ip_mac WHERE device_id = %s AND ip_address <> ''",
+            (device_id,),
+        )
+        endpoint_rows = cur.fetchall()
+        dns = load_dns_cache()
+        endpoints: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for r in endpoint_rows:
+            ip = r.get("ip_address") or ""
+            mac = _normalise_mac(r.get("mac_address"))
+            key = (mac, ip)
+            if key in seen:
+                continue
+            seen.add(key)
+            endpoints.append(
+                {
+                    "id": r["mac_id"],
+                    "port_id": r["port_id"],
+                    "ifIndex": r.get("mac_ifIndex"),
+                    "mac": mac,
+                    "ip": ip,
+                    "ip_version": r.get("ip_version"),
+                    "hostname": (dns.get(ip) or {}).get("hostname"),
+                }
+            )
+
         return {
             "device": _row(device),
             "ports": [_row(p) for p in ports],
             "neighbours": [_row(n) for n in neighbours],
             "processors": [_row(p) for p in processors],
             "mempools": [_row(m) for m in mempools],
+            "endpoints": endpoints,
         }
     finally:
         cur.close()

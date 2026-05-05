@@ -1,0 +1,9 @@
+[Unit]
+Description=netviz: refresh reverse-DNS cache for endpoint IPs
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/workspace/netviz
+EnvironmentFile=%h/workspace/netviz/.env
+ExecStart=%h/workspace/netviz/.venv/bin/python -m netviz.dns_resolver
+Nice=15

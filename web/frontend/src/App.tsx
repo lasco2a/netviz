@@ -1,12 +1,16 @@
 import { useEffect } from "react";
 
+import { AdminModal } from "@/components/AdminModal";
 import { DeviceDrawer } from "@/components/DeviceDrawer";
 import { DeviceTable } from "@/components/DeviceTable";
 import { FilterBar } from "@/components/FilterBar";
 import { GraphView } from "@/components/GraphView";
+import { HelpModal } from "@/components/HelpModal";
 import { LocationTree } from "@/components/LocationTree";
 import { Login } from "@/components/Login";
 import { TopBar } from "@/components/TopBar";
+import { TreeMapView } from "@/components/TreeMapView";
+import { hydrateFromHash, useUrlSync } from "@/lib/urlState";
 import { useApp } from "@/store/app";
 
 export function App() {
@@ -29,6 +33,13 @@ export function App() {
     }
   }, [user, index, loadingSnapshot, loadSnapshot]);
 
+  // Hydrate URL state once we have the snapshot (so device selection etc. can
+  // resolve). Subsequent store changes are written back via useUrlSync.
+  useEffect(() => {
+    if (index) hydrateFromHash();
+  }, [index]);
+  useUrlSync();
+
   if (!authChecked) {
     return <div className="p-6 text-obs-mute text-sm">Checking session\u2026</div>;
   }
@@ -49,11 +60,15 @@ export function App() {
           <div className="p-6 text-obs-mute text-sm">Loading snapshot\u2026</div>
         ) : viewMode === "graph" ? (
           <GraphView />
+        ) : viewMode === "treemap" ? (
+          <TreeMapView />
         ) : (
           <DeviceTable />
         )}
         <DeviceDrawer />
       </main>
+      <HelpModal />
+      <AdminModal />
     </div>
   );
 }

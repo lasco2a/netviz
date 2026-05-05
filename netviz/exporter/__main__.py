@@ -31,7 +31,9 @@ def main() -> int:
     print(
         f"[netviz-export] done in {elapsed:.2f}s "
         f"(devices={meta['device_count']}, edges={meta['edge_count']}, "
-        f"ghost={meta['ghost_endpoint_count']})",
+        f"ghost={meta['ghost_endpoint_count']}, "
+        f"endpoints={meta.get('endpoint_count', 0)} "
+        f"({meta.get('endpoint_resolved', 0)} resolved))",
         flush=True,
     )
     return 0

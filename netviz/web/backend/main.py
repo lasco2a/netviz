@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -10,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from netviz.config import HOST, PORT, REPO_ROOT, SESSION_HOURS, SNAPSHOT_DIR
-from netviz.web.backend import auth
+from netviz.web.backend import admin, auth, search as search_mod
 
 app = FastAPI(title="netviz", version="0.1.0", docs_url=None, redoc_url=None)
 
@@ -98,6 +100,83 @@ def device(device_id: int, _: auth.User = Depends(current_user)) -> FileResponse
         _safe_snapshot_path(f"device/{device_id}.json"),
         media_type="application/json",
     )
+
+
+# ---------------------------------------------------------------------------
+# Search + config + admin
+# ---------------------------------------------------------------------------
+
+def _load_snapshot_cached() -> dict:
+    """Read snapshot.json. Cheap; caching is left to the OS page cache."""
+    p = SNAPSHOT_DIR / "snapshot.json"
+    if not p.is_file():
+        raise HTTPException(status_code=503, detail="snapshot not yet generated")
+    with p.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.get("/api/search")
+def api_search(q: str = "", limit: int = 500, _: auth.User = Depends(current_user)) -> dict:
+    if not q.strip():
+        return {"devices": [], "endpoints": []}
+    snap = _load_snapshot_cached()
+    return search_mod.search(
+        q,
+        snap.get("devices", []),
+        snap.get("endpoints", []),
+        limit=max(1, min(limit, 5000)),
+    )
+
+
+@app.get("/api/config")
+def api_config(_: auth.User = Depends(current_user)) -> dict:
+    """Surface env + last-snapshot info for the UI (Help/Admin modals)."""
+    try:
+        snap = _load_snapshot_cached()
+        meta = snap.get("meta", {})
+    except HTTPException:
+        meta = {}
+    return {
+        "dns": {
+            "enabled": os.environ.get("NETVIZ_DNS_ENABLED", "true").lower()
+            not in ("0", "false", "no", "off"),
+            "ttl_days": int(os.environ.get("NETVIZ_DNS_CACHE_TTL_DAYS", "7")),
+        },
+        "snapshot": {
+            "generated_at": meta.get("generated_at"),
+            "device_count": meta.get("device_count", 0),
+            "edge_count": meta.get("edge_count", 0),
+            "endpoint_count": meta.get("endpoint_count", 0),
+            "endpoint_resolved": meta.get("endpoint_resolved", 0),
+        },
+    }
+
+
+def _require_admin(user: auth.User = Depends(current_user)) -> auth.User:
+    if (user.level or 0) < 10:
+        raise HTTPException(status_code=403, detail="admin required")
+    return user
+
+
+@app.post("/api/admin/refresh")
+async def api_admin_refresh(
+    request: Request, _: auth.User = Depends(_require_admin)
+) -> dict:
+    body = await request.json() if await request.body() else {}
+    kind = body.get("kind", "exporter")
+    if kind not in ("exporter", "dns"):
+        raise HTTPException(status_code=400, detail="kind must be 'exporter' or 'dns'")
+    dns_force = bool(body.get("dns_force", False))
+    try:
+        job = admin.start_refresh(kind, dns_force=dns_force)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "kind": job.kind, "started_at": int(job.started_at)}
+
+
+@app.get("/api/admin/refresh/status")
+def api_admin_refresh_status(_: auth.User = Depends(_require_admin)) -> dict:
+    return admin.status()
 
 
 # ---------------------------------------------------------------------------

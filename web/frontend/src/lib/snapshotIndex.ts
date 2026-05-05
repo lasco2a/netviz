@@ -1,6 +1,6 @@
 // In-memory snapshot index. Built once after fetch; consumed by graph + table.
 
-import type { Device, Edge, Snapshot, TreeNode } from "./types";
+import type { Device, Edge, Endpoint, Snapshot, TreeNode } from "./types";
 
 export interface SnapshotIndex {
   raw: Snapshot;
@@ -9,6 +9,13 @@ export interface SnapshotIndex {
   adjacency: Map<number, Array<{ other: number; edge: Edge }>>;
   // Pre-flattened device-id sets per tree node id, including descendants.
   treeDescendants: Record<string, Set<number>>;
+  // Endpoints (`ip_mac` rows) — empty array on snapshots from older exporters.
+  endpoints: Endpoint[];
+  endpointsByDevice: Map<number, Endpoint[]>;
+  // IP -> device_id for cross-link drawer rendering. Built from devices.ip
+  // only; endpoints whose IP equals a managed device's IP get a "→ device"
+  // affordance rather than being treated as separate hosts.
+  deviceIdByIp: Map<string, number>;
 }
 
 export function buildIndex(s: Snapshot): SnapshotIndex {
@@ -30,7 +37,23 @@ export function buildIndex(s: Snapshot): SnapshotIndex {
     });
   }
 
-  return { raw: s, byId, adjacency, treeDescendants };
+  const endpoints = s.endpoints ?? [];
+  const endpointsByDevice = new Map<number, Endpoint[]>();
+  for (const ep of endpoints) {
+    if (ep.device_id == null) continue;
+    let arr = endpointsByDevice.get(ep.device_id);
+    if (!arr) {
+      arr = [];
+      endpointsByDevice.set(ep.device_id, arr);
+    }
+    arr.push(ep);
+  }
+  const deviceIdByIp = new Map<string, number>();
+  for (const d of s.devices) {
+    if (d.ip) deviceIdByIp.set(d.ip, d.device_id);
+  }
+
+  return { raw: s, byId, adjacency, treeDescendants, endpoints, endpointsByDevice, deviceIdByIp };
 }
 
 // Post-order traversal that yields each node together with the union of all

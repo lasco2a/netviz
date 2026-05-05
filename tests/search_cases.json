@@ -1,0 +1,146 @@
+{
+  "_doc": "Shared parity fixtures for netviz search. The same snapshot subset and queries must yield identical results from both the TS frontend (lib/search.ts) and the Python backend (web/backend/search.py). Run `pytest tests/test_search_parity.py` and `npm test -- search` to verify.",
+  "devices": [
+    {"device_id": 1, "hostname": "core-sw1.lan", "sysName": "core-sw1", "ip": "10.1.1.1", "type": "network", "os": "ios", "location": "DC1 / Rack A"},
+    {"device_id": 2, "hostname": "edge-rtr.example.com", "sysName": "edge-rtr", "ip": "10.1.1.15", "type": "network", "os": "ios-xe", "location": "DC1 / Rack B"},
+    {"device_id": 3, "hostname": "ap-floor3", "sysName": "ap-floor3", "ip": "10.2.5.7", "type": "wireless", "os": "airos", "location": "Office / Floor 3"},
+    {"device_id": 4, "hostname": "srv-db01", "sysName": "srv-db01", "ip": "192.168.10.50", "type": "server", "os": "linux", "location": "DC1 / Rack A"},
+    {"device_id": 5, "hostname": "v6host", "sysName": "v6host", "ip": "2001:db8::42", "type": "server", "os": "linux", "location": "DC2"}
+  ],
+  "endpoints": [
+    {"id": 100, "device_id": 1, "ip": "10.1.1.10", "mac": "aa:bb:cc:11:22:33", "hostname": "printer-a.lan"},
+    {"id": 101, "device_id": 1, "ip": "10.1.1.25", "mac": "aa:bb:cc:11:22:44", "hostname": null},
+    {"id": 102, "device_id": 2, "ip": "10.1.1.30", "mac": "de:ad:be:ef:00:01", "hostname": "phone-12.lan"},
+    {"id": 103, "device_id": 2, "ip": "192.168.10.99", "mac": "de:ad:be:ef:00:02", "hostname": null},
+    {"id": 104, "device_id": 3, "ip": "10.2.5.50", "mac": "11:22:33:44:55:66", "hostname": "laptop-bob"},
+    {"id": 105, "device_id": null, "ip": "2001:db8::100", "mac": "aa:bb:cc:dd:ee:ff", "hostname": "v6client"}
+  ],
+  "cases": [
+    {
+      "name": "plain substring matches hostname",
+      "q": "core",
+      "devices": [1],
+      "endpoints": []
+    },
+    {
+      "name": "case-insensitive",
+      "q": "CORE-SW1",
+      "devices": [1],
+      "endpoints": []
+    },
+    {
+      "name": "matches location text quoted phrase",
+      "q": "\"rack a\"",
+      "devices": [1, 4],
+      "endpoints": []
+    },
+    {
+      "name": "matches type",
+      "q": "wireless",
+      "devices": [3],
+      "endpoints": []
+    },
+    {
+      "name": "exact ipv4 device",
+      "q": "10.1.1.1",
+      "devices": [1],
+      "endpoints": []
+    },
+    {
+      "name": "exact ipv4 endpoint",
+      "q": "10.1.1.10",
+      "devices": [],
+      "endpoints": [100]
+    },
+    {
+      "name": "ipv4 cidr /24",
+      "q": "10.1.1.0/24",
+      "devices": [1, 2],
+      "endpoints": [100, 101, 102]
+    },
+    {
+      "name": "ipv4 cidr /29 narrow",
+      "q": "10.1.1.8/29",
+      "devices": [2],
+      "endpoints": [100]
+    },
+    {
+      "name": "ipv4 range full",
+      "q": "10.1.1.10-10.1.1.20",
+      "devices": [2],
+      "endpoints": [100]
+    },
+    {
+      "name": "ipv4 range shorthand last octet",
+      "q": "10.1.1.20-30",
+      "devices": [],
+      "endpoints": [101, 102]
+    },
+    {
+      "name": "ipv6 cidr",
+      "q": "2001:db8::/64",
+      "devices": [5],
+      "endpoints": [105]
+    },
+    {
+      "name": "ipv6 exact",
+      "q": "2001:db8::42",
+      "devices": [5],
+      "endpoints": []
+    },
+    {
+      "name": "mac substring colonless",
+      "q": "aabbcc",
+      "devices": [],
+      "endpoints": [100, 101, 105]
+    },
+    {
+      "name": "mac with colons",
+      "q": "de:ad:be:ef",
+      "devices": [],
+      "endpoints": [102, 103]
+    },
+    {
+      "name": "mac mixed case dashes",
+      "q": "DE-AD-BE-EF-00-01",
+      "devices": [],
+      "endpoints": [102]
+    },
+    {
+      "name": "AND tokens text+text",
+      "q": "rack server",
+      "devices": [4],
+      "endpoints": []
+    },
+    {
+      "name": "AND tokens cidr+text",
+      "q": "10.1.1.0/24 printer",
+      "devices": [],
+      "endpoints": [100]
+    },
+    {
+      "name": "AND tokens range+mac",
+      "q": "10.1.1.20-50 deadbeef",
+      "devices": [],
+      "endpoints": [102]
+    },
+    {
+      "name": "no match",
+      "q": "zzzzznotreal",
+      "devices": [],
+      "endpoints": []
+    },
+    {
+      "name": "empty query returns nothing",
+      "q": "",
+      "devices": [],
+      "endpoints": []
+    },
+    {
+      "name": "endpoint hostname match",
+      "q": "phone-12",
+      "devices": [],
+      "endpoints": [102]
+    }
+  ]
+}

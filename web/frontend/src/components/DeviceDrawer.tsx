@@ -42,6 +42,11 @@ export function DeviceDrawer() {
         <Section title={`Neighbours (${detail.neighbours.length})`}>
           <NeighboursList rows={detail.neighbours} />
         </Section>
+        {detail.endpoints && detail.endpoints.length > 0 && (
+          <Section title={`Endpoints (${detail.endpoints.length})`}>
+            <EndpointsList rows={detail.endpoints} />
+          </Section>
+        )}
         {(detail.processors.length > 0 || detail.mempools.length > 0) && (
           <Section title="Health">
             {detail.processors.map((p) => (
@@ -156,6 +161,40 @@ function NeighboursList({ rows }: { rows: import("@/lib/types").NeighbourRow[] }
           <div className="w-24 truncate text-obs-mute">{n.remote_port}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function EndpointsList({ rows }: { rows: import("@/lib/types").Endpoint[] }) {
+  const deviceIdByIp = useApp((s) => s.index?.deviceIdByIp);
+  const select = useApp((s) => s.selectDevice);
+  if (!rows.length) {
+    return <div className="p-2 text-xs text-obs-mute">no endpoints</div>;
+  }
+  return (
+    <div className="max-h-64 overflow-auto text-xs font-mono">
+      {rows.map((e) => {
+        const linkedId = deviceIdByIp?.get(e.ip);
+        return (
+          <div
+            key={e.id}
+            className="flex items-center px-2 py-0.5 border-b border-obs-border/50 last:border-b-0"
+          >
+            <div className="w-32 truncate">{e.ip}</div>
+            <div className="w-40 truncate text-obs-mute">{e.mac}</div>
+            <div className="flex-1 truncate">{e.hostname ?? ""}</div>
+            {linkedId != null && linkedId !== e.device_id && (
+              <button
+                title="Open managed device with this IP"
+                onClick={() => select(linkedId)}
+                className="ml-2 text-obs-blue hover:underline"
+              >
+                \u2192
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

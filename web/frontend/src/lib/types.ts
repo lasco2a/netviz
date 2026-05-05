@@ -40,6 +40,21 @@ export interface GhostEndpoint {
   protocol: string | null;
 }
 
+// Endpoint = an IP/MAC harvested from `ip_mac` (Observium ARP/bridge tables).
+// `device_id` is the *managed* switch the endpoint was learned on (or null if
+// that switch is outside our exported set). `hostname` is populated from the
+// reverse-DNS cache when available.
+export interface Endpoint {
+  id: number;
+  device_id: number | null;
+  port_id: number | null;
+  ifIndex: number | null;
+  mac: string;
+  ip: string;
+  ip_version: number | null;
+  hostname: string | null;
+}
+
 export interface TreeNode {
   id: string;
   name: string;
@@ -55,10 +70,13 @@ export interface Snapshot {
     device_count: number;
     edge_count: number;
     ghost_endpoint_count: number;
+    endpoint_count?: number;
+    endpoint_resolved?: number;
   };
   devices: Device[];
   edges: Edge[];
   ghost_endpoints: GhostEndpoint[];
+  endpoints?: Endpoint[];
   trees: Record<TreeSource, TreeNode>;
 }
 
@@ -68,6 +86,7 @@ export interface DeviceDetail {
   neighbours: NeighbourRow[];
   processors: Processor[];
   mempools: Mempool[];
+  endpoints?: Endpoint[];
 }
 
 export interface Port {

@@ -4,6 +4,11 @@ import * as api from "@/lib/api";
 import { buildIndex, type SnapshotIndex } from "@/lib/snapshotIndex";
 import type { DeviceDetail, MeUser, TreeSource } from "@/lib/types";
 
+export interface SearchResult {
+  devices: Set<number>;
+  endpoints: Set<number>;
+}
+
 interface AppState {
   // Auth
   user: MeUser | null;
@@ -14,19 +19,25 @@ interface AppState {
   snapshotError: string | null;
   // UI selection
   treeSource: TreeSource;
-  selectedTreeNode: string | null; // tree node id (within current tree)
+  selectedTreeNode: string | null;
   selectedDeviceId: number | null;
   deviceDetail: DeviceDetail | null;
   loadingDetail: boolean;
   // Filters
   filters: { search: string; types: Set<string>; statuses: Set<number> };
+  // Search (always server-side when query non-empty)
+  searchResult: SearchResult | null;
+  searchPending: boolean;
+  searchError: string | null;
   // View mode
-  viewMode: "table" | "graph";
+  viewMode: "table" | "graph" | "treemap";
+  treeMapFocus: string | null;
   showGhostEndpoints: boolean;
-  // Graph clustering: group device nodes under compound parents derived from
-  // the top-level node of the active tree. "off" = flat graph.
   clusterMode: "off" | "tree";
   collapseClusters: boolean;
+  // Modals
+  helpOpen: string | null; // null = closed; otherwise section anchor
+  adminOpen: boolean;
 
   // Actions
   checkSession: () => Promise<void>;
@@ -34,7 +45,8 @@ interface AppState {
   doLogout: () => Promise<void>;
   loadSnapshot: () => Promise<void>;
   setTreeSource: (s: TreeSource) => void;
-  setViewMode: (m: "table" | "graph") => void;
+  setViewMode: (m: "table" | "graph" | "treemap") => void;
+  setTreeMapFocus: (id: string | null) => void;
   toggleGhostEndpoints: () => void;
   setClusterMode: (m: "off" | "tree") => void;
   toggleCollapseClusters: () => void;
@@ -43,7 +55,15 @@ interface AppState {
   setSearch: (s: string) => void;
   toggleType: (t: string) => void;
   toggleStatus: (s: number) => void;
+  setHelpOpen: (id: string | null) => void;
+  setAdminOpen: (open: boolean) => void;
 }
+
+// Module-scoped controller so successive setSearch() calls cancel in-flight
+// requests. Keeping this outside zustand avoids type gymnastics.
+let _searchAborter: AbortController | null = null;
+let _searchTimer: ReturnType<typeof setTimeout> | null = null;
+const SEARCH_DEBOUNCE_MS = 250;
 
 export const useApp = create<AppState>((set, get) => ({
   user: null,
@@ -57,10 +77,16 @@ export const useApp = create<AppState>((set, get) => ({
   deviceDetail: null,
   loadingDetail: false,
   filters: { search: "", types: new Set(), statuses: new Set() },
+  searchResult: null,
+  searchPending: false,
+  searchError: null,
   viewMode: "table",
+  treeMapFocus: null,
   showGhostEndpoints: false,
   clusterMode: "off",
   collapseClusters: false,
+  helpOpen: null,
+  adminOpen: false,
 
   async checkSession() {
     try {
@@ -102,11 +128,15 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   setTreeSource(s) {
-    set({ treeSource: s, selectedTreeNode: null });
+    set({ treeSource: s, selectedTreeNode: null, treeMapFocus: null });
   },
 
   setViewMode(m) {
     set({ viewMode: m });
+  },
+
+  setTreeMapFocus(id) {
+    set({ treeMapFocus: id });
   },
 
   toggleGhostEndpoints() {
@@ -139,6 +169,38 @@ export const useApp = create<AppState>((set, get) => ({
 
   setSearch(s) {
     set({ filters: { ...get().filters, search: s } });
+    // Cancel any pending fetch.
+    if (_searchTimer) clearTimeout(_searchTimer);
+    if (_searchAborter) _searchAborter.abort();
+
+    const trimmed = s.trim();
+    if (!trimmed) {
+      set({ searchResult: null, searchPending: false, searchError: null });
+      return;
+    }
+    set({ searchPending: true, searchError: null });
+    _searchTimer = setTimeout(async () => {
+      const aborter = new AbortController();
+      _searchAborter = aborter;
+      try {
+        const res = await api.search(trimmed, aborter.signal);
+        // Stale check: if the user typed again the trimmed value will differ.
+        if (get().filters.search.trim() !== trimmed) return;
+        set({
+          searchResult: {
+            devices: new Set(res.devices),
+            endpoints: new Set(res.endpoints),
+          },
+          searchPending: false,
+        });
+      } catch (e) {
+        if ((e as DOMException)?.name === "AbortError") return;
+        set({
+          searchPending: false,
+          searchError: e instanceof Error ? e.message : "search failed",
+        });
+      }
+    }, SEARCH_DEBOUNCE_MS);
   },
 
   toggleType(t) {
@@ -153,5 +215,13 @@ export const useApp = create<AppState>((set, get) => ({
     const next = new Set(f.statuses);
     next.has(st) ? next.delete(st) : next.add(st);
     set({ filters: { ...f, statuses: next } });
+  },
+
+  setHelpOpen(id) {
+    set({ helpOpen: id });
+  },
+
+  setAdminOpen(open) {
+    set({ adminOpen: open });
   },
 }));

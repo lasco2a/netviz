@@ -1,0 +1,13 @@
+[Unit]
+Description=netviz reverse-DNS cache: refresh daily
+
+[Timer]
+# Run 5 min after boot, then daily.
+OnBootSec=5min
+OnCalendar=daily
+AccuracySec=10min
+Persistent=true
+Unit=netviz-dns.service
+
+[Install]
+WantedBy=timers.target

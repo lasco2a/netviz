@@ -92,6 +92,8 @@ journalctl  --user -u netviz-backend.service -f
 | `NETVIZ_SESSION_HOURS` | JWT cookie lifetime (default 8 h). |
 | `NETVIZ_SESSION_SECRET` | HMAC secret for the JWT cookie. **Set me.** |
 | `NETVIZ_MIN_USER_LEVEL` | Minimum Observium user level allowed to log in (0–10, 10=admin). Default 1. |
+| `NETVIZ_DNS_ENABLED` | Toggle scheduled reverse-DNS lookups. Default `true`. |
+| `NETVIZ_DNS_CACHE_TTL_DAYS` | Re-resolve cache entries older than this. Default 7. |
 
 ## Layout
 
@@ -154,11 +156,29 @@ a partial snapshot.
 - **Tree picker**: switch between location / groups / topology. Selecting a
   node filters the table and graph to that subtree.
 - **Filter chips**: type and status (up/down) chips with live counts.
-- **Search**: hostname, sysName, IP, location, hardware. In the graph view,
-  matches are highlighted and non-matches are dimmed.
-- **Device table**: virtualised; click a row to open the drawer.
-- **Device drawer**: facts, ports (with ifAlias / speed / oper status),
-  neighbours, processors, mempools (with utilisation bars).
+- **Search** (always server-side, debounced 250 ms). Tokens are AND-ed:
+  - free text: matches hostname, sysName, IP, location, hardware, ifAlias
+  - quoted phrase: `"rack a"`
+  - IPv4/IPv6 exact, CIDR (`10.0.0.0/8`, `2001:db8::/32`)
+  - IPv4 range full or last-octet shorthand: `10.1.1.10-10.1.1.50`, `10.1.1.10-50`
+  - MAC: any of `aa:bb:cc:dd:ee:ff`, `aa-bb-cc-dd-ee-ff`, `aabbccddeeff`,
+    OUI prefix `aabbcc`
+  - Matches devices **and** endpoints; chips intersect on the device side.
+- **Endpoints**: IP/MAC entries learned from Observium's `ip_mac` table.
+  Visible in the device drawer with a `→` link to the managed device when an
+  endpoint IP matches another device. Reverse-DNS hostnames are populated by a
+  separate timer (see below).
+- **Tree-Map**: explorable map view; drill from root → tree node → device →
+  endpoints; click breadcrumb to escape.
+- **URL state**: search query, view, tree, focus, drawer device and active
+  chips persist in the hash. Use the **Copy link** button to share a deep-link.
+- **Help (?)**: opens an in-app help modal — also addressable via
+  `#help=search`, `#help=endpoints`, etc.
+- **Admin (⚙)**: visible to Observium users with `level >= 10`. Force a
+  snapshot rebuild or reverse-DNS refresh; status panel tails the last
+  ~200 lines of the running job.
+- **Device drawer**: facts, ports, neighbours, processors, mempools,
+  endpoints.
 - **Graph view**: Cytoscape.js + fcose. Click a node to open the drawer.
   - **Ghost endpoints** toggle (capped at 1 500 per view).
   - **Cluster by tree** toggle: wraps device nodes in compound parents derived
@@ -166,6 +186,21 @@ a partial snapshot.
   - **Collapse**: when clustering is on, render only one node per cluster with
     weighted summary edges between clusters — true tree-graph hybrid.
   - Built-in legend overlay.
+
+## Reverse-DNS resolver
+
+A separate timer (`netviz-dns.timer`, daily) runs `python -m netviz.dns_resolver`
+which reads `snapshot/snapshot.json`, performs reverse lookups for IP addresses
+not seen recently, and writes `snapshot/dns_cache.json`. The next exporter run
+joins the cache into `endpoints[].hostname`.
+
+| Var | Description |
+|-----|-------------|
+| `NETVIZ_DNS_ENABLED` | Disable scheduled lookups (`false` = no-op). Default `true`. |
+| `NETVIZ_DNS_CACHE_TTL_DAYS` | Re-resolve entries older than N days. Default 7. |
+
+When `NETVIZ_DNS_ENABLED=false`, the in-app Admin panel can still trigger a
+one-off run after two confirmation prompts.
 
 ## Roadmap
 
@@ -177,6 +212,7 @@ a partial snapshot.
 - [x] Milestone 6 – clustering + filter chips + search highlighting
 - [x] Milestone 7 – tree-graph hybrid (collapse) + legend + auto-fit
 - [x] Milestone 8 – systemd units + cron timer + README
+- [x] Milestone 9 – endpoints (`ip_mac`) + DNS resolver + smart search + URL state + Tree-Map + Help/Admin
 
 ## Tracking
 
