@@ -33,7 +33,7 @@ the React frontend renders a filterable table + Cytoscape.js graph view.
 
 ```bash
 # 1. clone or open this repository
-cd /home/lasco/workspace/netviz
+cd /home/user/workspace/netviz
 
 # 2. one-shot install (creates .venv, installs deps, copies .env.example)
 ./scripts/install.sh
