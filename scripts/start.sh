@@ -65,12 +65,11 @@ if (( need_snapshot )); then
 fi
 
 # ── 4. Launch backend ─────────────────────────────────────────────────────────
-# Kill any process already bound to the target port.
-existing=$(lsof -ti "tcp:${PORT}" 2>/dev/null || true)
-if [[ -n "$existing" ]]; then
-    echo "[netviz] port ${PORT} in use (pid $existing) — stopping it"
-    kill "$existing" 2>/dev/null || true
-    sleep 1
+# Check the port is free before trying to bind.
+if lsof -ti "tcp:${PORT}" &>/dev/null; then
+    echo "[netviz] error: port ${PORT} is already in use" >&2
+    echo "         Either free the port or set a different NETVIZ_PORT in .env" >&2
+    exit 1
 fi
 
 echo "[netviz] starting on http://${HOST}:${PORT}"
