@@ -31,6 +31,12 @@ Keep it up to date as new epics are created.
 |------|-------|------|
 | netviz – Network Visualisation Tool for Observium (KAN-352) | opencode | [Confluence Page](https://laurent2a.atlassian.net/wiki/spaces/opencode/pages/41287785) |
 
+## GitHub
+
+- Repo: **https://github.com/lasco2a/netviz**
+- Branch `main` — production-ready, all 8 milestones merged
+- Branch `feature/netviz-milestone-5` — full M5–M8 history preserved
+
 ---
 
 ## Planned Future Epics / Stories (not yet created)
