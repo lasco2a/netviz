@@ -185,6 +185,10 @@ a partial snapshot.
     (dagre top-down, the default), Horizontal (dagre LR), Breadth-first, Circle,
     Concentric (sphere-like, ranked by degree), Grid and ELK (layered). The
     selection is persisted in the URL hash via `layout=`.
+  - **Double-click** a device node to zoom in 15 % (incremental, capped at 4×)
+    centred on it and highlight its direct neighbours (+ ghost endpoints) in
+    green. Double-click another node to move the highlight; click empty canvas
+    to clear it.
   - **Ghost endpoints** toggle (capped at 1 500 per view).
   - **Cluster by tree** toggle: wraps device nodes in compound parents derived
     from the top-level tree node. Only available with the Force layout —

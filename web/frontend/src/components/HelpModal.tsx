@@ -47,6 +47,12 @@ const SECTIONS: Array<{ id: string; label: string; body: React.ReactNode }> = [
           Circle, Concentric (sphere-like), Grid and ELK (layered). Cluster-by-tree
           is only available with the Force layout.
         </p>
+        <p>
+          <strong>Graph interaction</strong> — single-click a device to open
+          its drawer. Double-click to zoom in 15 % on it and highlight its
+          direct neighbours (including ghost endpoints) in green. Click on
+          empty canvas to clear the highlight.
+        </p>
       </div>
     ),
   },

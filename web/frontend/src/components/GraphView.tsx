@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import cytoscape, { type Core, type ElementDefinition } from "cytoscape";
+import cytoscape, { type Core, type ElementDefinition, type NodeSingular } from "cytoscape";
 
 import {
   cyStyle,
@@ -178,7 +178,26 @@ export function GraphView() {
       if (typeof did === "number") void selectDevice(did);
     });
     cy.on("tap", (evt) => {
-      if (evt.target === cy) void selectDevice(null);
+      if (evt.target === cy) {
+        void selectDevice(null);
+        cy.elements().removeClass("neighbour neighbour-edge dblclick-target");
+      }
+    });
+    cy.on("dblclick", "node", (evt) => {
+      const node = evt.target as NodeSingular;
+      // Clear previous highlight then apply new one.
+      cy.elements().removeClass("neighbour neighbour-edge dblclick-target");
+      node.addClass("dblclick-target");
+      const hood = node.openNeighborhood();
+      hood.nodes().addClass("neighbour");
+      hood.edges().addClass("neighbour-edge");
+      // Zoom in 15 %, centred on the clicked node, capped at maxZoom.
+      const nextZoom = Math.min(cy.zoom() * 1.15, 4);
+      cy.animate({
+        zoom: { level: nextZoom, position: node.position() },
+        duration: 250,
+        easing: "ease-in-out-cubic",
+      });
     });
     cyRef.current = cy;
     return () => {

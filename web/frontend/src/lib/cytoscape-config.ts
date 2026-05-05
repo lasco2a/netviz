@@ -105,6 +105,31 @@ export const cyStyle: cytoscape.StylesheetStyle[] = [
     selector: ".match",
     style: { "border-color": "#f0ad4e", "border-width": 3 },
   },
+  // Double-click neighbour highlight. Rules placed after status/dim/match so
+  // the green colour wins on neighbour nodes regardless of their status.
+  {
+    selector: "node.neighbour",
+    style: {
+      "border-color": "#3aa55c",
+      "border-width": 3,
+      "background-color": "#e6f5ec",
+    },
+  },
+  {
+    selector: "node.dblclick-target",
+    style: {
+      "border-color": "#1f8a3d",
+      "border-width": 4,
+      "background-color": "#c9ecdb",
+    },
+  },
+  {
+    selector: "edge.neighbour-edge",
+    style: {
+      "line-color": "#3aa55c",
+      width: 2.5,
+    },
+  },
   // Collapsed cluster: rendered as a single solid summary node carrying the
   // device count. Used when the user enables "collapse" in tree-cluster mode.
   {
