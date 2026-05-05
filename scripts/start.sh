@@ -65,5 +65,13 @@ if (( need_snapshot )); then
 fi
 
 # ── 4. Launch backend ─────────────────────────────────────────────────────────
+# Kill any process already bound to the target port.
+existing=$(lsof -ti "tcp:${PORT}" 2>/dev/null || true)
+if [[ -n "$existing" ]]; then
+    echo "[netviz] port ${PORT} in use (pid $existing) — stopping it"
+    kill "$existing" 2>/dev/null || true
+    sleep 1
+fi
+
 echo "[netviz] starting on http://${HOST}:${PORT}"
 exec uvicorn netviz.web.backend.main:app --host "$HOST" --port "$PORT" --log-level info
