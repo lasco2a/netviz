@@ -10,7 +10,6 @@ export function TopBar() {
   const viewMode = useApp((s) => s.viewMode);
   const setViewMode = useApp((s) => s.setViewMode);
   const setHelpOpen = useApp((s) => s.setHelpOpen);
-  const setAdminOpen = useApp((s) => s.setAdminOpen);
   const isAdmin = (user?.level ?? 0) >= 10;
 
   async function copyLink() {
@@ -38,6 +37,18 @@ export function TopBar() {
             {m === "table" ? "Table" : m === "graph" ? "Graph" : "Tree-Map"}
           </button>
         ))}
+        {isAdmin && (
+          <button
+            onClick={() => setViewMode("admin")}
+            className={`px-3 py-1 ${
+              viewMode === "admin"
+                ? "bg-obs-blue text-white"
+                : "text-obs-mute hover:text-white"
+            }`}
+          >
+            Admin
+          </button>
+        )}
       </div>
       <div className="relative flex-1 max-w-md">
         <input
@@ -74,15 +85,6 @@ export function TopBar() {
       >
         ?
       </button>
-      {isAdmin && (
-        <button
-          onClick={() => setAdminOpen(true)}
-          title="Admin"
-          className="text-obs-mute hover:text-white text-base w-7 h-7 inline-flex items-center justify-center rounded border border-obs-navyLight"
-        >
-          \u2699
-        </button>
-      )}
       <div className="text-xs">
         <span className="text-obs-mute">user </span>
         <span className="font-medium">{user?.username}</span>

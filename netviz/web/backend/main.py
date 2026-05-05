@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from netviz.config import HOST, PORT, REPO_ROOT, SESSION_HOURS, SNAPSHOT_DIR
 from netviz.web.backend import admin, auth, search as search_mod
+from netviz import db
 
 app = FastAPI(title="netviz", version="0.1.0", docs_url=None, redoc_url=None)
 
@@ -177,6 +178,23 @@ async def api_admin_refresh(
 @app.get("/api/admin/refresh/status")
 def api_admin_refresh_status(_: auth.User = Depends(_require_admin)) -> dict:
     return admin.status()
+
+
+@app.get("/api/admin/sql")
+def api_admin_sql(_: auth.User = Depends(_require_admin)) -> dict:
+    """Return the last 100 SQL queries executed by the web backend."""
+    return {
+        "entries": [
+            {
+                "ts": e.ts,
+                "sql": e.sql,
+                "params": e.params,
+                "duration_ms": e.duration_ms,
+                "rows": e.rows,
+            }
+            for e in db.get_sql_log()
+        ]
+    }
 
 
 # ---------------------------------------------------------------------------

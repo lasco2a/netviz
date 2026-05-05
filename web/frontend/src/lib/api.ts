@@ -101,3 +101,17 @@ export async function adminRefreshStatus(): Promise<{
   const res = await fetch("/api/admin/refresh/status");
   return jsonOrThrow(res);
 }
+
+export interface SqlEntry {
+  ts: number;
+  sql: string;
+  params: string;
+  duration_ms: number;
+  rows: number;
+}
+
+export async function fetchSqlLog(): Promise<SqlEntry[]> {
+  const res = await fetch("/api/admin/sql");
+  const data = await jsonOrThrow<{ entries: SqlEntry[] }>(res);
+  return data.entries;
+}

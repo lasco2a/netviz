@@ -31,7 +31,7 @@ interface AppState {
   searchPending: boolean;
   searchError: string | null;
   // View mode
-  viewMode: "table" | "graph" | "treemap";
+  viewMode: "table" | "graph" | "treemap" | "admin";
   treeMapFocus: string | null;
   showGhostEndpoints: boolean;
   clusterMode: "off" | "tree";
@@ -47,7 +47,7 @@ interface AppState {
   doLogout: () => Promise<void>;
   loadSnapshot: () => Promise<void>;
   setTreeSource: (s: TreeSource) => void;
-  setViewMode: (m: "table" | "graph" | "treemap") => void;
+  setViewMode: (m: "table" | "graph" | "treemap" | "admin") => void;
   setTreeMapFocus: (id: string | null) => void;
   toggleGhostEndpoints: () => void;
   setClusterMode: (m: "off" | "tree") => void;

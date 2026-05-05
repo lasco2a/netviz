@@ -120,7 +120,8 @@ export function useUrlSync(): void {
       }
       writeHash({
         q: s.filters.search,
-        view: s.viewMode,
+        // Don't persist the admin view — it's a transient panel.
+        view: s.viewMode === "admin" ? "table" : s.viewMode,
         tree: s.treeSource,
         treenode: s.selectedTreeNode ?? undefined,
         focus: s.treeMapFocus ?? undefined,
