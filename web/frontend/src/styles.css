@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  font-family: "Helvetica Neue", Tahoma, Arial, sans-serif;
+  font-size: 13px;
+  color: #1f2d3d;
+  background: #f5f7fa;
+  margin: 0;
+}

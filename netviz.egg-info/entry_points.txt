@@ -1,0 +1,3 @@
+[console_scripts]
+netviz-export = netviz.exporter.__main__:main
+netviz-serve = netviz.web.backend.main:run
